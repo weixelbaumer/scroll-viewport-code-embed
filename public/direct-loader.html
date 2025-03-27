@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>GitHub Code Loader</title>
+  <script>
+    // Bypass ngrok warning screen
+    (function() {
+      // Try to bypass the ngrok warning page
+      function bypassNgrokWarning() {
+        console.log("Checking for ngrok warning page...");
+        
+        // Check if we're on the ngrok warning page
+        if (document.body && 
+            document.body.textContent && 
+            document.body.textContent.includes("ngrok") &&
+            document.body.textContent.includes("Visit Site")) {
+          
+          console.log("Detected ngrok warning page, attempting to bypass");
+          
+          // Try to find and click the "Visit Site" button
+          const buttons = document.querySelectorAll('button, a.btn, a.button');
+          for (let button of buttons) {
+            if (button.textContent && button.textContent.trim() === 'Visit Site') {
+              console.log("Found Visit Site button, clicking it");
+              button.click();
+              return true;
+            }
+          }
+          
+          // Try to find any link with "Visit Site" text
+          const links = document.querySelectorAll('a');
+          for (let link of links) {
+            if (link.textContent && link.textContent.trim() === 'Visit Site') {
+              console.log("Found Visit Site link, clicking it");
+              link.click();
+              return true;
+            }
+          }
+        }
+        
+        return false;
+      }
+      
+      // Try immediately and after a short delay
+      bypassNgrokWarning();
+      setTimeout(bypassNgrokWarning, 500);
+      setTimeout(bypassNgrokWarning, 1000);
+    })();
+    
+    // Load the actual script
+    window.addEventListener('load', function() {
+      const script = document.createElement('script');
+      script.src = '/scroll-viewport-theme.js?' + new Date().getTime(); // Cache buster
+      script.onerror = function(e) {
+        document.getElementById('status').textContent = 'Error loading script: ' + e;
+        document.getElementById('status').style.color = 'red';
+      };
+      script.onload = function() {
+        document.getElementById('status').textContent = 'Script loaded successfully!';
+        document.getElementById('status').style.color = 'green';
+      };
+      
+      // Add ngrok bypass headers via fetch instead of script tag
+      fetch('/scroll-viewport-theme.js', {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.text())
+      .then(code => {
+        // Create script element with the code
+        const inlineScript = document.createElement('script');
+        inlineScript.textContent = code;
+        document.head.appendChild(inlineScript);
+        
+        document.getElementById('status').textContent = 'Script loaded via fetch successfully!';
+        document.getElementById('status').style.color = 'green';
+      })
+      .catch(error => {
+        document.getElementById('status').textContent = 'Error loading script via fetch: ' + error;
+        document.getElementById('status').style.color = 'red';
+        
+        // Fall back to direct script tag
+        document.head.appendChild(script);
+      });
+    });
+  </script>
+</head>
+<body>
+  <h1>GitHub Code Renderer Loader</h1>
+  <p id="status">Loading...</p>
+  
+  <h2>How to Use</h2>
+  <p>This page loads the GitHub Code Renderer script while bypassing ngrok warnings.</p>
+  <p>To use in Scroll Viewport, add this code to your JS editor:</p>
+  <pre style="background:#f5f5f5;padding:15px;border-radius:5px;overflow:auto;">
+vp.loadScript('https://35be-90-146-230-192.ngrok-free.app/direct-loader.html');
+  </pre>
+  
+  <h2>Test</h2>
+  <p>Put this marker in your Confluence page content:</p>
+  <pre style="background:#f5f5f5;padding:15px;border-radius:5px;overflow:auto;">
+##GITHUB:https://github.com/username/repo/blob/main/filename.ext##
+  </pre>
+</body>
+</html> 

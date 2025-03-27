@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="ngrok-skip-browser-warning" content="true">
+  <script>
+    // Inline ngrok bypass script for immediate execution
+    (function() {
+      console.log("Running inline ngrok bypass script");
+      
+      // First, try to break out of an iframe if we're in one
+      if (window !== window.top) {
+        try {
+          console.log("Attempting to break out of iframe");
+          window.top.location.href = window.location.href;
+        } catch (e) {
+          console.error("Failed to break out of iframe:", e);
+        }
+      }
+
+      // Override ngrok warning functions
+      window.ngrokCheckParentFrameIsNotNgrok = function() { return true; };
+      window.ngrokWarnUserIfParentFrameIsNgrok = function() { return false; };
+
+      // Make sure these are also overridden on window.self
+      if (window.self) {
+        window.self.ngrokCheckParentFrameIsNotNgrok = function() { return true; };
+        window.self.ngrokWarnUserIfParentFrameIsNgrok = function() { return false; };
+      }
+
+      // Auto-click Visit Site function
+      function clickVisitSite() {
+        console.log("Looking for Visit Site button");
+        try {
+          // Try multiple selectors to find the Visit Site button
+          const selectors = ['a.button', 'button.button', 'a.btn', 'button.btn', '[role="button"]', 'a'];
+          
+          for (const selector of selectors) {
+            const elements = document.querySelectorAll(selector);
+            for (const element of elements) {
+              if (element.textContent && element.textContent.trim() === 'Visit Site') {
+                console.log('Found "Visit Site" button, clicking it');
+                element.click();
+                return true;
+              }
+            }
+          }
+          
+          // Last resort: find any element with Visit Site text
+          const allElements = document.querySelectorAll('*');
+          for (const element of allElements) {
+            if (element.textContent && element.textContent.trim() === 'Visit Site') {
+              console.log('Found element with "Visit Site" text, clicking it');
+              element.click();
+              return true;
+            }
+          }
+        } catch (e) {
+          console.error("Error in click function:", e);
+        }
+        return false;
+      }
+
+      // Try immediately
+      clickVisitSite();
+      
+      // And try again multiple times with increasing delays
+      setTimeout(clickVisitSite, 300);
+      setTimeout(clickVisitSite, 600);
+      setTimeout(clickVisitSite, 1000);
+      setTimeout(clickVisitSite, 2000);
+      
+      // Also when the page loads
+      window.addEventListener('load', function() {
+        clickVisitSite();
+        setTimeout(clickVisitSite, 500);
+      });
+      
+      // And when mutation happens in the DOM
+      if (window.MutationObserver) {
+        new MutationObserver(function() {
+          clickVisitSite();
+        }).observe(document.documentElement, {childList: true, subtree: true});
+      }
+    })();
+  </script>
+  <title>GitHub Code Macro - Renderer</title>
+  <script src="https://connect-cdn.atl-paas.net/all.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    .loading {
+      padding: 20px;
+      text-align: center;
+      color: #6b778c;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+    }
+    .error {
+      padding: 10px;
+      background-color: #ffebe6;
+      border-radius: 3px;
+      color: #de350b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="content" class="loading">Loading GitHub code snippet...</div>
+  
+  <script>
+    // Initialize Atlassian Connect
+    AP.require(['confluence'], function(confluence) {
+      
+      // Get macro parameters
+      confluence.getMacroData(function(data) {
+        if (!data) {
+          document.getElementById('content').innerHTML = `
+            <div class="error">
+              <strong>Error:</strong> Missing macro parameters.
+            </div>
+          `;
+          return;
+        }
+        
+        let githubUrl;
+        
+        // Check if we have the direct URL parameter (new format)
+        if (data.url) {
+          githubUrl = data.url;
+        } 
+        // Backward compatibility with old format
+        else if (data.repository && data.path) {
+          const repository = data.repository;
+          const path = data.path;
+          const branch = data.branch || 'main';
+          githubUrl = `https://github.com/${repository}/blob/${branch}/${path}`;
+        } else {
+          document.getElementById('content').innerHTML = `
+            <div class="error">
+              <strong>Error:</strong> Missing required GitHub URL.
+            </div>
+          `;
+          return;
+        }
+        
+        const lines = data.lines || '';
+        const theme = data.theme || 'github';
+        
+        // Get base URL from current window location
+        const baseUrl = window.location.origin;
+        
+        // Fetch rendered code from our service
+        fetch(`${baseUrl}/html?url=${encodeURIComponent(githubUrl)}&lines=${encodeURIComponent(lines)}&theme=${encodeURIComponent(theme)}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0',
+            'ngrok-skip-browser-warning': 'true'
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Error fetching code: ${response.status}`);
+          }
+          return response.text();
+        })
+        .then(html => {
+          document.getElementById('content').innerHTML = html;
+          
+          // Resize the iframe to fit content
+          resizeToFitContent();
+        })
+        .catch(error => {
+          document.getElementById('content').innerHTML = `
+            <div class="error">
+              <strong>Error loading GitHub code:</strong> ${error.message}<br>
+              Please check that the GitHub URL is correct.
+            </div>
+          `;
+          
+          // Resize the iframe to fit error message
+          resizeToFitContent();
+        });
+      });
+      
+      // Helper function to resize the iframe
+      function resizeToFitContent() {
+        const content = document.getElementById('content');
+        const height = content.offsetHeight;
+        
+        // Tell Confluence to resize the iframe
+        AP.resize('100%', height + 10); // Add a little padding
+      }
+    });
+  </script>
+</body>
+</html> 

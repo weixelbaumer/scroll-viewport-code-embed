@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scroll Viewport Theme Integration - GitHub Code Renderer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #333;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      border: 1px solid #ddd;
+    }
+    code {
+      background-color: #f5f5f5;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 14px;
+      border: 1px solid #ddd;
+    }
+    .alert {
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+    .alert-info {
+      background-color: #d1ecf1;
+      border: 1px solid #bee5eb;
+      color: #0c5460;
+    }
+    .alert-warning {
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      color: #856404;
+    }
+    .alert-danger {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    .steps {
+      counter-reset: step-counter;
+      margin: 0;
+      padding: 0;
+      list-style-type: none;
+    }
+    .steps li {
+      counter-increment: step-counter;
+      margin-bottom: 20px;
+      position: relative;
+      padding-left: 50px;
+    }
+    .steps li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 35px;
+      height: 35px;
+      background-color: #0066cc;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    .note {
+      background-color: #e8f4fd;
+      border-left: 4px solid #0066cc;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+  <h1>Scroll Viewport Theme Integration - GitHub Code Renderer</h1>
+  
+  <div class="alert alert-info">
+    <strong>About this solution:</strong> This approach uses a JavaScript function that is added to your Scroll Viewport theme, allowing you to embed GitHub code in your static help center pages despite Scroll Viewport's content filtering.
+  </div>
+
+  <h2>Why This Solution Works</h2>
+  <p>Scroll Viewport converts Confluence pages to static HTML, removing scripts and other interactive elements. However, it provides a way to add custom JavaScript through the theme editor. This solution leverages that capability to:</p>
+  <ul>
+    <li>Run code after the page has been converted and loaded</li>
+    <li>Find special text markers in your content</li>
+    <li>Replace those markers with GitHub code snippets</li>
+    <li>Apply syntax highlighting and formatting</li>
+  </ul>
+
+  <div class="alert alert-warning">
+    <strong>Important:</strong> This solution works because the JavaScript runs <em>after</em> Scroll Viewport has finished generating the static page. The markers remain as plain text through the conversion process and are then processed by our script.
+  </div>
+
+  <h2>Implementation Steps</h2>
+  
+  <ol class="steps">
+    <li>
+      <h3>Open your Scroll Viewport theme editor</h3>
+      <p>In Confluence, navigate to:</p>
+      <ul>
+        <li>Space Settings → Scroll Viewport → Your Help Center → Edit Theme</li>
+      </ul>
+    </li>
+
+    <li>
+      <h3>Access the Custom JavaScript section</h3>
+      <p>In the theme editor:</p>
+      <ul>
+        <li>Go to "Templates"</li>
+        <li>Select "JS"</li>
+        <li>You'll see a JavaScript editor where you can add custom code</li>
+      </ul>
+    </li>
+
+    <li>
+      <h3>Add the GitHub code renderer function</h3>
+      <p>Copy the following JavaScript and paste it into your theme's custom JavaScript section:</p>
+      <pre id="codeSnippet"></pre>
+      <button onclick="copyCode()" style="padding: 8px 16px; background:#0066cc; color:white; border:none; border-radius:4px; cursor:pointer; margin-top:10px;">Copy Code</button>
+    </li>
+
+    <li>
+      <h3>Save your theme changes</h3>
+      <p>Click the "Save" button to apply the changes to your theme.</p>
+    </li>
+
+    <li>
+      <h3>Add GitHub code markers to your Confluence pages</h3>
+      <p>In your Confluence page content, add text markers in the following format:</p>
+      <pre>##GITHUB:URL:LINES:THEME##</pre>
+      <p>For example:</p>
+      <pre>##GITHUB:https://github.com/itext/itext7/blob/develop/kernel/src/main/java/com/itextpdf/kernel/pdf/PdfDocument.java:100-120:github##</pre>
+      
+      <table>
+        <tr>
+          <th>Part</th>
+          <th>Description</th>
+          <th>Required?</th>
+        </tr>
+        <tr>
+          <td>URL</td>
+          <td>GitHub URL to the code file</td>
+          <td>Yes</td>
+        </tr>
+        <tr>
+          <td>LINES</td>
+          <td>Line range to display (e.g., 10-20)</td>
+          <td>No (displays all lines if omitted)</td>
+        </tr>
+        <tr>
+          <td>THEME</td>
+          <td>Syntax highlighting theme (e.g., github, github-dark, monokai)</td>
+          <td>No (defaults to 'github' if omitted)</td>
+        </tr>
+      </table>
+    </li>
+
+    <li>
+      <h3>Publish your Confluence pages</h3>
+      <p>After adding the markers, publish your pages as usual. When viewed in Scroll Viewport, the markers will be replaced with properly formatted code from GitHub.</p>
+    </li>
+  </ol>
+
+  <h2>How It Works</h2>
+  <ol>
+    <li>When a page loads in Scroll Viewport, the custom JavaScript runs</li>
+    <li>The script searches through all text in the page for the <code>##GITHUB:URL:LINES:THEME##</code> pattern</li>
+    <li>For each marker found, it makes an API request to our server to fetch the code</li>
+    <li>The code is inserted into the page with proper syntax highlighting</li>
+  </ol>
+
+  <div class="note">
+    <strong>Note:</strong> This method is designed to survive the Scroll Viewport conversion process. The text markers remain as plain text in the HTML output, which our JavaScript can then find and process. This approach ensures that your GitHub code embeds will appear correctly in your published help center.
+  </div>
+
+  <h2>Using With Multiple Code Snippets</h2>
+  <p>You can add as many code markers as you need on a single page. Each will be replaced with the corresponding GitHub code. This is perfect for documentation with multiple examples.</p>
+
+  <h2>Troubleshooting</h2>
+  <ul>
+    <li><strong>Code not appearing:</strong> Make sure the marker format is exactly as shown above, with no spaces in the format.</li>
+    <li><strong>Wrong line numbers:</strong> Verify that your line range is in the format <code>start-end</code>, e.g., <code>10-20</code>.</li>
+    <li><strong>Server connection issues:</strong> Ensure that your Scroll Viewport server can reach our GitHub Code Renderer server.</li>
+  </ul>
+
+  <script>
+    // Get the current server URL to use in the example
+    const serverUrl = window.location.origin;
+    
+    // Fetch the theme script from the server
+    fetch(`${serverUrl}/scroll-viewport-theme.js`)
+      .then(response => response.text())
+      .then(code => {
+        document.getElementById('codeSnippet').textContent = code;
+      })
+      .catch(error => {
+        document.getElementById('codeSnippet').textContent = 
+          `// Error loading code: ${error.message}\n// Please visit ${serverUrl}/scroll-viewport-theme.js to get the code directly`;
+      });
+    
+    // Function to copy code to clipboard
+    function copyCode() {
+      const codeElement = document.getElementById('codeSnippet');
+      const textArea = document.createElement('textarea');
+      textArea.value = codeElement.textContent;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      // Show copied notification
+      const button = event.target;
+      const originalText = button.textContent;
+      button.textContent = 'Copied!';
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 2000);
+    }
+  </script>
+</body>
+</html> 

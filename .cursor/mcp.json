@@ -1,0 +1,69 @@
+{
+  "mcpServers": {
+    "mastra": {
+      "command": "npx",
+      "args": ["-y", "@mastra/mcp-docs-server@latest"]
+    },
+    "nextjs": {
+      "command": "npx",
+      "args": ["-y", "@docgen/nextjs-docs-server@latest"]
+    },
+    "allpepper-memory-bank": {
+      "command": "npx",
+      "args": ["-y", "@allpepper/memory-bank-mcp"],
+      "env": {
+        "MEMORY_BANK_ROOT": ".memorybank"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "memory_bank_read",
+        "memory_bank_write",
+        "memory_bank_update",
+        "list_projects",
+        "list_project_files"
+      ]
+    },
+    "jdoodle-integration-server": {
+      "command": "node",
+      "args": ["src/jdoodle-integration/server.js"],
+      "env": {
+        "PORT": "3000",
+        "GITHUB_TOKEN": "",
+        "JDOODLE_CLIENT_ID": "",
+        "JDOODLE_CLIENT_SECRET": "",
+        "CACHE_DURATION": "3600000"
+      },
+      "disabled": true,
+      "autoApprove": []
+    },
+    "code-renderer": {
+      "command": "node",
+      "args": ["src/server-side-renderer/server.js"],
+      "env": {
+        "PORT": "3001"
+      },
+      "disabled": true,
+      "autoApprove": []
+    },
+    "markdown-tool": {
+      "command": "node",
+      "args": ["src/markdown-solution/github-to-markdown.js"],
+      "env": {},
+      "disabled": true,
+      "autoApprove": []
+    },
+    "github-code-renderer": {
+      "command": "node",
+      "args": ["scroll-viewport-code-embed/server.js"],
+      "env": {
+        "PORT": "3000",
+        "GITHUB_TOKEN": "",
+        "CACHE_DURATION": "1800000",
+        "ALLOWED_ORIGINS": "*",
+        "DEBUG": "true"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}

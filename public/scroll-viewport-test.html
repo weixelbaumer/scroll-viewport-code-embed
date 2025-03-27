@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scroll Viewport Test Page</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1, h2, h3 { 
+      margin-top: 30px;
+      color: #333;
+    }
+    .method {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    .method h2 {
+      margin-top: 0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .demo-area {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 4px;
+      border-left: 4px solid #0366d6;
+    }
+    .banner {
+      background: #ffeeee;
+      border-left: 4px solid #cc0000;
+      padding: 15px;
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Scroll Viewport Solutions Demonstration</h1>
+  
+  <div class="banner">
+    <h2 style="margin-top:0">Important!</h2>
+    <p>Scroll Viewport filters out all HTML tags. These JavaScript-based solutions inject content AFTER the page has loaded, bypassing the filtering mechanism.</p>
+  </div>
+  
+  <div class="method">
+    <h2>Method 1: Direct JavaScript Link</h2>
+    <p>This method loads a single GitHub file using a simple script tag. In Confluence, add this to an HTML macro:</p>
+    
+    <pre>&lt;script src="http://localhost:3000/scroll-viewport.js?url=https://github.com/itext/itext7/blob/develop/kernel/src/main/java/com/itextpdf/kernel/pdf/PdfDocument.java&lines=1-20&theme=github"&gt;&lt;/script&gt;</pre>
+    
+    <p>Here's what it looks like in action:</p>
+    
+    <div class="demo-area">
+      <h3>PdfDocument.java (lines 1-20)</h3>
+      <!-- The actual JavaScript injection -->
+      <script src="/scroll-viewport.js?url=https://github.com/itext/itext7/blob/develop/kernel/src/main/java/com/itextpdf/kernel/pdf/PdfDocument.java&lines=1-20&theme=github"></script>
+    </div>
+    
+    <p>You can customize:</p>
+    <ul>
+      <li><strong>url</strong>: The GitHub URL to the file</li>
+      <li><strong>lines</strong>: Optional range of lines to display (e.g., 1-20)</li>
+      <li><strong>theme</strong>: Syntax highlighting theme (github, github-dark, monokai, atom-one-dark, etc.)</li>
+    </ul>
+  </div>
+  
+  <div class="method">
+    <h2>Method 2: Text Markers</h2>
+    <p>This method allows you to place multiple code snippets throughout your content using text markers. In Confluence, first add this script to an HTML macro at the top of your page:</p>
+    
+    <pre>&lt;script src="http://localhost:3000/scroll-viewport-marker.js"&gt;&lt;/script&gt;</pre>
+    
+    <p>Then, in your content, use markers in this format:</p>
+    
+    <pre>##GITHUB:URL##</pre>
+    <pre>##GITHUB:URL:LINES##</pre>
+    <pre>##GITHUB:URL:LINES:THEME##</pre>
+    
+    <p>Here's what it looks like in action:</p>
+    
+    <div class="demo-area">
+      <!-- The marker processor script -->
+      <script src="/scroll-viewport-marker.js"></script>
+      
+      <h3>Example 1: Basic usage</h3>
+      <p>Here's the first 20 lines of the PdfDocument.java file:</p>
+      
+      ##GITHUB:https://github.com/itext/itext7/blob/develop/kernel/src/main/java/com/itextpdf/kernel/pdf/PdfDocument.java:1-20##
+      
+      <h3>Example 2: With different theme</h3>
+      <p>Here's the same file with a different theme:</p>
+      
+      ##GITHUB:https://github.com/itext/itext7/blob/develop/kernel/src/main/java/com/itextpdf/kernel/pdf/PdfDocument.java:21-40:atom-one-dark##
+      
+      <h3>Example 3: Different file</h3>
+      <p>Here's a different Java example:</p>
+      
+      ##GITHUB:https://github.com/itext/itext-publications-examples-java/blob/develop/src/main/java/com/itextpdf/samples/htmlsamples/chapter01/C01E01_HelloWorld.java##
+    </div>
+  </div>
+  
+  <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; text-align: center; color: #666;">
+    <p>These solutions work with Scroll Viewport because they use JavaScript to inject content after the page has loaded.</p>
+    <p><a href="/">Back to Home</a></p>
+  </div>
+</body>
+</html> 

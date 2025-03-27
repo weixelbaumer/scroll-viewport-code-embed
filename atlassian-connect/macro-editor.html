@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="ngrok-skip-browser-warning" content="true">
+  <script>
+    // Inline ngrok bypass script for immediate execution
+    (function() {
+      console.log("Running inline ngrok bypass script");
+      
+      // First, try to break out of an iframe if we're in one
+      if (window !== window.top) {
+        try {
+          console.log("Attempting to break out of iframe");
+          window.top.location.href = window.location.href;
+        } catch (e) {
+          console.error("Failed to break out of iframe:", e);
+        }
+      }
+
+      // Override ngrok warning functions
+      window.ngrokCheckParentFrameIsNotNgrok = function() { return true; };
+      window.ngrokWarnUserIfParentFrameIsNgrok = function() { return false; };
+
+      // Make sure these are also overridden on window.self
+      if (window.self) {
+        window.self.ngrokCheckParentFrameIsNotNgrok = function() { return true; };
+        window.self.ngrokWarnUserIfParentFrameIsNgrok = function() { return false; };
+      }
+
+      // Auto-click Visit Site function
+      function clickVisitSite() {
+        console.log("Looking for Visit Site button");
+        try {
+          // Try multiple selectors to find the Visit Site button
+          const selectors = ['a.button', 'button.button', 'a.btn', 'button.btn', '[role="button"]', 'a'];
+          
+          for (const selector of selectors) {
+            const elements = document.querySelectorAll(selector);
+            for (const element of elements) {
+              if (element.textContent && element.textContent.trim() === 'Visit Site') {
+                console.log('Found "Visit Site" button, clicking it');
+                element.click();
+                return true;
+              }
+            }
+          }
+          
+          // Last resort: find any element with Visit Site text
+          const allElements = document.querySelectorAll('*');
+          for (const element of allElements) {
+            if (element.textContent && element.textContent.trim() === 'Visit Site') {
+              console.log('Found element with "Visit Site" text, clicking it');
+              element.click();
+              return true;
+            }
+          }
+        } catch (e) {
+          console.error("Error in click function:", e);
+        }
+        return false;
+      }
+
+      // Try immediately
+      clickVisitSite();
+      
+      // And try again multiple times with increasing delays
+      setTimeout(clickVisitSite, 300);
+      setTimeout(clickVisitSite, 600);
+      setTimeout(clickVisitSite, 1000);
+      setTimeout(clickVisitSite, 2000);
+      
+      // Also when the page loads
+      window.addEventListener('load', function() {
+        clickVisitSite();
+        setTimeout(clickVisitSite, 500);
+      });
+      
+      // And when mutation happens in the DOM
+      if (window.MutationObserver) {
+        new MutationObserver(function() {
+          clickVisitSite();
+        }).observe(document.documentElement, {childList: true, subtree: true});
+      }
+    })();
+  </script>
+  <title>GitHub Code Macro - Editor</title>
+  <link rel="stylesheet" href="https://unpkg.com/aui@9.4.0/dist/aui/aui-prototyping.css">
+  <script src="https://unpkg.com/aui@9.4.0/dist/aui/aui-prototyping.js"></script>
+  <script src="https://connect-cdn.atl-paas.net/all.js"></script>
+  <style>
+    body {
+      margin: 20px;
+      background-color: #f4f5f7;
+    }
+    .macro-editor-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .field-group {
+      margin-bottom: 20px;
+    }
+    .field-examples {
+      color: #6b778c;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    .preview-container {
+      margin-top: 30px;
+      padding: 20px;
+      border: 1px solid #dfe1e6;
+      border-radius: 3px;
+      background-color: #f4f5f7;
+    }
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .preview-loading {
+      text-align: center;
+      padding: 40px;
+      color: #6b778c;
+    }
+    .preview-error {
+      color: #de350b;
+      padding: 10px;
+      background-color: #ffebe6;
+      border-radius: 3px;
+    }
+    .submit-buttons {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+    .submit-buttons button {
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="macro-editor-container">
+    <h2>GitHub Code Snippet</h2>
+    <form id="github-code-form" class="aui">
+      <div class="field-group">
+        <label for="url">GitHub URL<span class="aui-icon icon-required">required</span></label>
+        <input class="text full-width-field" type="text" id="url" name="url" placeholder="e.g., https://github.com/itext/itext-publications-examples-java/blob/develop/src/main/java/com/itextpdf/samples/htmlsamples/chapter01/C01E02_HelloWorld.java">
+        <div class="field-examples">
+          Paste a GitHub URL to a file or paste a raw.githubusercontent.com URL directly
+        </div>
+      </div>
+      
+      <div class="field-group">
+        <label for="lines">Line Range</label>
+        <input class="text medium-field" type="text" id="lines" name="lines" placeholder="e.g., 10-20">
+        <div class="field-examples">
+          Optional: specify a range of lines to show (e.g., 10-20)
+        </div>
+      </div>
+      
+      <div class="field-group">
+        <label for="theme">Theme</label>
+        <select class="select medium-field" id="theme" name="theme">
+          <option value="github">GitHub Light</option>
+          <option value="github-dark">GitHub Dark</option>
+          <option value="monokai">Monokai</option>
+          <option value="atom-one-dark">Atom One Dark</option>
+          <option value="vs2015">VS2015</option>
+          <option value="xcode">Xcode</option>
+          <option value="dracula">Dracula</option>
+        </select>
+        <div class="field-examples">
+          Select a syntax highlighting theme
+        </div>
+      </div>
+      
+      <div class="preview-container">
+        <div class="preview-header">
+          <h4>Preview</h4>
+          <button id="refresh-preview" class="aui-button aui-button-subtle" type="button">
+            <span class="aui-icon aui-icon-small aui-iconfont-refresh"></span> Refresh
+          </button>
+        </div>
+        <div id="preview-content" class="preview-loading">
+          Paste a GitHub URL above and click "Refresh" to see a preview
+        </div>
+      </div>
+      
+      <div class="submit-buttons">
+        <button id="cancel-button" class="aui-button aui-button-link" type="button">Cancel</button>
+        <button id="submit-button" class="aui-button aui-button-primary" type="submit">Insert</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // Initialize Atlassian Connect
+    AP.require(['confluence', 'dialog'], function(confluence, dialog) {
+      
+      // Get macro parameters if this is an edit
+      AP.confluence.getMacroData(function(data) {
+        if (data) {
+          // Populate form with existing data
+          if (data.url) {
+            document.getElementById('url').value = data.url || '';
+          } else if (data.repository && data.path) {
+            // Handle old format data for backward compatibility
+            const branch = data.branch || 'main';
+            const repo = data.repository.trim();
+            const path = data.path.trim();
+            document.getElementById('url').value = `https://github.com/${repo}/blob/${branch}/${path}`;
+          }
+          
+          document.getElementById('lines').value = data.lines || '';
+          document.getElementById('theme').value = data.theme || 'github';
+          
+          // Trigger preview
+          loadPreview();
+        }
+      });
+      
+      // Handle form submission
+      document.getElementById('github-code-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate required fields
+        const url = document.getElementById('url').value.trim();
+        
+        if (!url) {
+          alert('GitHub URL is required');
+          return;
+        }
+        
+        // Save the macro data
+        const macroData = {
+          url: url,
+          lines: document.getElementById('lines').value.trim(),
+          theme: document.getElementById('theme').value
+        };
+        
+        // Submit macro data back to Confluence
+        AP.confluence.saveMacro(macroData);
+        AP.dialog.close();
+      });
+      
+      // Handle cancel button
+      document.getElementById('cancel-button').addEventListener('click', function() {
+        AP.dialog.close();
+      });
+      
+      // Handle preview refresh
+      document.getElementById('refresh-preview').addEventListener('click', loadPreview);
+      
+      // Function to load preview
+      function loadPreview() {
+        const url = document.getElementById('url').value.trim();
+        const lines = document.getElementById('lines').value.trim();
+        const theme = document.getElementById('theme').value;
+        
+        if (!url) {
+          document.getElementById('preview-content').innerHTML = 'Please enter a GitHub URL to preview';
+          return;
+        }
+        
+        document.getElementById('preview-content').innerHTML = '<div class="preview-loading">Loading preview...</div>';
+        
+        // Get base URL from current window location
+        const baseUrl = window.location.origin;
+        
+        // Construct the preview URL
+        const previewUrl = `${baseUrl}/html?url=${encodeURIComponent(url)}&lines=${encodeURIComponent(lines)}&theme=${encodeURIComponent(theme)}`;
+        
+        // Fetch the preview
+        fetch(previewUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0',
+            'ngrok-skip-browser-warning': 'true'
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to load preview: ${response.status} ${response.statusText}`);
+          }
+          return response.text();
+        })
+        .then(html => {
+          document.getElementById('preview-content').innerHTML = html;
+        })
+        .catch(error => {
+          document.getElementById('preview-content').innerHTML = 
+            `<div class="preview-error">Error loading preview: ${error.message}</div>`;
+        });
+      }
+    });
+  </script>
+</body>
+</html> 
