@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>GitHub Code Block Marker</title>
+    <!-- Include Atlassian Connect JS API -->
+    <script src="https://connect-cdn.atl-paas.net/all.js" async></script>
+    <style>
+        /* Minimal styling for the marker text if needed */
+        body { margin: 0; font-family: monospace; white-space: pre; font-size: 12px; color: #555; }
+    </style>
+</head>
+<body>
+    <div id="marker-output">Generating marker...</div>
+
+    <script>
+        // Wait for the Connect API to be ready
+        AP.context.getContext(function(response) {
+            try {
+                const params = response.macro.params || {};
+                // Get parameters from the macro editor (needs implementation if you have one)
+                // For now, we might need placeholder or default values.
+                // IMPORTANT: How are url, lines, theme passed TO this view?
+                // Assuming they are stored as macro parameters named 'url', 'lines', 'theme'
+                const githubUrl = params.url || "INVALID_URL_PLEASE_EDIT_MACRO";
+                const lineRange = params.lines || ""; // Keep empty if not specified
+                const theme = params.theme || "github-light"; // Default theme
+
+                // Construct the marker string
+                // Format: ##GITHUB:url[:lines][:theme]##
+                // Ensure parts are correctly joined with colons, handling optional parts
+                let marker = "##GITHUB:";
+                marker += githubUrl; // Required
+                if (lineRange) {
+                    marker += ":" + lineRange;
+                }
+                // Always include theme, even if default? Or only if non-default?
+                // Let's include it if it's not the default for clarity.
+                if (theme !== 'github-light' || lineRange) { // Include theme if lines are present or theme is non-default
+                     // If lines were skipped, add placeholder for theme position? No, let's adjust parsing.
+                     // Simpler: always include lines (even if empty) if theme is present?
+                     // Let's refine the marker format slightly for easier parsing:
+                     // ##GITHUB:url|lines=1-10|theme=monokai##
+                     // Let's stick to the colon format for now and handle parsing carefully in the theme script.
+                     marker += ":" + (lineRange || ""); // Add lines part (or empty string)
+                     marker += ":" + theme;             // Add theme part
+                } else if (lineRange) {
+                     marker += ":" + lineRange; // Add lines if present, but theme is default
+                }
+                 // Let's simplify marker: ##GITHUB:url:lines:theme## always, use "" for empty lines
+                marker = `##GITHUB:${githubUrl}:${lineRange}:${theme}##`;
+
+
+                // Output the marker text directly into the body
+                // Using textContent to avoid HTML interpretation
+                document.getElementById('marker-output').textContent = marker;
+
+                // Resize iframe to fit the marker text (optional, might not be needed)
+                AP.sizeToParent();
+            } catch (error) {
+                 console.error("Error generating marker:", error);
+                 document.getElementById('marker-output').textContent = "##ERROR_GENERATING_MARKER##";
+                 AP.sizeToParent();
+            }
+        });
+    </script>
+</body>
+</html> 

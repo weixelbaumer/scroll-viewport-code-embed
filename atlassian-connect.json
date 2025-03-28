@@ -28,13 +28,46 @@
                 "name": {
                     "value": "GitHub Code Block"
                 },
-                "url": "/macro",
+                "url": "/macro-view.html",
                 "description": {
-                    "value": "Embed code from GitHub repositories"
+                    "value": "Embed code from GitHub repositories. Renders as a marker for Scroll Viewport."
                 },
-                "width": "100%",
-                "height": "300px",
-                "bodyType": "none"
+                "outputType": "block",
+                "bodyType": "none",
+                "parameters": [
+                    {
+                        "identifier": "url",
+                        "name": {
+                            "value": "GitHub File URL"
+                        },
+                        "description": {
+                            "value": "Full URL to the file on GitHub (e.g., https://github.com/user/repo/blob/main/file.js)"
+                        },
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "identifier": "lines",
+                        "name": {
+                            "value": "Line Range (Optional)"
+                        },
+                        "description": {
+                            "value": "e.g., 5-15 or 10"
+                        },
+                        "type": "string",
+                        "required": false
+                    },
+                    {
+                        "identifier": "theme",
+                        "name": {
+                            "value": "Theme"
+                        },
+                        "type": "enum",
+                        "values": ["github-light", "github-dark", "monokai", "dracula", "vs2015", "xcode", "atom-one-dark"],
+                        "defaultValue": "github-light",
+                        "required": false
+                    }
+                ]
             }
         ]
     }
