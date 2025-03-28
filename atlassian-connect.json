@@ -1,0 +1,26 @@
+{
+    "key": "github-code-renderer",
+    "name": "GitHub Code Renderer",
+    "description": "Render GitHub code snippets for embedding in Confluence",
+    "baseUrl": "https://dev.tandav.com",
+    "vendor": {
+        "name": "Your Company",
+        "url": "https://dev.tandav.com"
+    },
+    "authentication": {
+        "type": "none"
+    },
+    "apiVersion": 1,
+    "modules": {
+        "generalPages": [
+            {
+                "key": "github-code-renderer",
+                "location": "system.top.navigation.bar",
+                "name": {
+                    "value": "GitHub Code Renderer"
+                },
+                "url": "/index.html"
+            }
+        ]
+    }
+} 

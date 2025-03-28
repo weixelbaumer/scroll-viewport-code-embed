@@ -32,8 +32,8 @@ We're working on a solution to integrate JDoodle with K15T Scroll Viewport for d
 ## Git Configuration
 
 This project uses custom git user configuration:
-- user.name: "Scroll Viewport Integration"
-- user.email: "scroll-viewport-integration@example.com"
+- user.name: "Stefan Weixelbaumer"
+- user.email: "sweixelbaumer@apryse.com"
 
 ## Project Structure
 

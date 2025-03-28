@@ -1,0 +1,1 @@
+cloudflared tunnel --config /Users/weix/.cloudflared/config.yml run github-fetcher-dev
