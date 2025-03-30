@@ -1,5 +1,5 @@
 {
-  "name": "github-code-renderer",
+  "name": "github-fetcher",
   "version": "1.1.4",
   "description": "GitHub code snippet renderer for embedding in Confluence with Scroll Viewport",
   "main": "server.js",

@@ -1,4 +1,4 @@
-# GitHub Code Renderer for Confluence & Scroll Viewport
+# GitHub Fetcher for Confluence & Scroll Viewport
 
 A Confluence app that allows users to easily embed syntax-highlighted code from GitHub repositories into Confluence pages, with full compatibility for Scroll Viewport.
 
@@ -78,7 +78,7 @@ To enable GitHub code blocks in Scroll Viewport, add custom JavaScript to your S
 4. Copy and paste the following JavaScript code:
 
 ```javascript
-// GitHub Code Renderer for Scroll Viewport
+// GitHub Fetcher for Scroll Viewport
 // Version 1.1.4
 
 // Only run on live sites, not in previews
