@@ -5,183 +5,219 @@
     <title>GitHub Code Renderer Documentation</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-            line-height: 1.5;
-            color: #172B4D;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
             margin: 0;
-            padding: 20px;
-            max-width: 800px;
+            padding: 0;
+            line-height: 1.6;
+            color: #172B4D;
+            background-color: #F4F5F7;
+        }
+        .container {
+            max-width: 900px;
             margin: 0 auto;
+            padding: 30px 20px;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         h1 {
-            color: #0052CC;
             border-bottom: 1px solid #DFE1E6;
             padding-bottom: 10px;
             margin-top: 0;
+            color: #172B4D;
         }
         h2 {
-            color: #0052CC;
             margin-top: 30px;
-            font-size: 20px;
+            color: #172B4D;
+            border-bottom: 1px solid #F4F5F7;
+            padding-bottom: 5px;
         }
-        p, ul, ol {
-            margin-bottom: 16px;
+        h3 {
+            margin-top: 20px;
+            color: #172B4D;
         }
         code {
             background-color: #F4F5F7;
-            padding: 2px 5px;
+            padding: 2px 4px;
             border-radius: 3px;
-            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-            font-size: 14px;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 90%;
         }
         pre {
             background-color: #F4F5F7;
             padding: 15px;
             border-radius: 3px;
             overflow-x: auto;
-            border: 1px solid #DFE1E6;
-        }
-        pre code {
-            background-color: transparent;
-            padding: 0;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 90%;
         }
         .note {
             background-color: #E3FCEF;
             border-left: 4px solid #36B37E;
             padding: 15px;
-            margin: 20px 0;
+            margin: 15px 0;
             border-radius: 3px;
         }
         .warning {
             background-color: #FFFAE6;
             border-left: 4px solid #FFAB00;
             padding: 15px;
-            margin: 20px 0;
+            margin: 15px 0;
+            border-radius: 3px;
+        }
+        .error {
+            background-color: #FFEBE6;
+            border-left: 4px solid #FF5630;
+            padding: 15px;
+            margin: 15px 0;
             border-radius: 3px;
         }
         img {
             max-width: 100%;
             border: 1px solid #DFE1E6;
             border-radius: 3px;
-            margin: 10px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border: 1px solid #DFE1E6;
+        }
+        th {
+            background-color: #F4F5F7;
+        }
+        tr:nth-child(even) {
+            background-color: #FAFBFC;
         }
         .footer {
-            margin-top: 50px;
-            border-top: 1px solid #DFE1E6;
+            margin-top: 40px;
             padding-top: 20px;
-            font-size: 14px;
+            border-top: 1px solid #DFE1E6;
             color: #6B778C;
+            font-size: 14px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <h1>GitHub Code Renderer Documentation</h1>
-    
-    <p>The GitHub Code Renderer allows you to easily embed syntax-highlighted code from GitHub repositories into your Confluence pages, with full compatibility for Scroll Viewport.</p>
-    
-    <div class="note">
-        <strong>Version:</strong> 1.1.0<br>
-        <strong>Vendor:</strong> Apryse
-    </div>
-    
-    <h2>Overview</h2>
-    
-    <p>This app provides two key components:</p>
-    
-    <ol>
-        <li><strong>GitHub Code Block Macro</strong> - A Confluence macro that makes it easy to embed code snippets from GitHub.</li>
-        <li><strong>Scroll Viewport Integration</strong> - Special handling to ensure code blocks render correctly in Scroll Viewport documentation.</li>
-    </ol>
-    
-    <h2>How to Use</h2>
-    
-    <h3>Adding a GitHub Code Block to a Confluence Page</h3>
-    
-    <ol>
-        <li>Edit your Confluence page</li>
-        <li>Click the '+' icon to add a macro</li>
-        <li>Search for and select "GitHub Code Block"</li>
-        <li>In the macro editor:
-            <ul>
-                <li>Enter the full GitHub URL to the file you want to display</li>
-                <li>Optionally, specify a line range (e.g., "5-15" or "10" for a single line)</li>
-                <li>Select a syntax highlighting theme</li>
-            </ul>
-        </li>
-        <li>Click "Insert" to add the macro to the page</li>
-        <li>Save your Confluence page</li>
-    </ol>
-    
-    <h3>Scroll Viewport Integration</h3>
-    
-    <p>When your content is viewed through Scroll Viewport, the code block will be automatically rendered with syntax highlighting. The macro outputs a special marker that Scroll Viewport's theme script processes to display beautifully formatted code.</p>
-    
-    <div class="note">
-        <strong>Important:</strong> To enable Scroll Viewport integration, your Scroll Viewport theme must include the GitHub Code Renderer theme script. Contact your Confluence administrator if code blocks aren't rendering correctly in Scroll Viewport.
-    </div>
-    
-    <h2>Supported GitHub URLs</h2>
-    
-    <p>You can use any of these URL formats:</p>
-    
-    <ul>
-        <li>Regular GitHub file URLs: <code>https://github.com/owner/repo/blob/branch/path/to/file.js</code></li>
-        <li>Raw GitHub content URLs: <code>https://raw.githubusercontent.com/owner/repo/branch/path/to/file.js</code></li>
-    </ul>
-    
-    <h2>Line Range Format</h2>
-    
-    <p>You can specify which lines to display using these formats:</p>
-    
-    <ul>
-        <li>Range: <code>5-15</code> (displays lines 5 through 15)</li>
-        <li>Single line: <code>10</code> (displays only line 10)</li>
-    </ul>
-    
-    <h2>Available Themes</h2>
-    
-    <p>The following syntax highlighting themes are available:</p>
-    
-    <ul>
-        <li>GitHub Light (default)</li>
-        <li>GitHub Dark</li>
-        <li>Monokai</li>
-        <li>Dracula</li>
-        <li>Visual Studio 2015</li>
-        <li>Xcode</li>
-        <li>Atom One Dark</li>
-    </ul>
-    
-    <h2>Security Considerations</h2>
-    
-    <div class="warning">
-        <strong>Important Security Notice:</strong>
+    <div class="container">
+        <h1>GitHub Code Renderer Documentation</h1>
+        
+        <div class="note">
+            <strong>Version:</strong> 1.1.3 - This Confluence app allows you to embed and render code snippets directly from GitHub repositories.
+        </div>
+        
+        <h2 id="getting-started">Getting Started</h2>
+        
+        <h3>Adding a GitHub Code Block to a Confluence Page</h3>
+        <ol>
+            <li>Edit a Confluence page</li>
+            <li>Place your cursor where you want to insert the code block</li>
+            <li>Type "/" to open the macro browser and search for "GitHub Code Block"</li>
+            <li>Select "GitHub Code Block" from the results</li>
+            <li>Fill in the required information in the form that appears</li>
+            <li>Click "Insert" to add the code block to your page</li>
+        </ol>
+        
+        <h3>Required Parameters</h3>
+        <table>
+            <tr>
+                <th>Field</th>
+                <th>Description</th>
+                <th>Example</th>
+            </tr>
+            <tr>
+                <td>GitHub URL</td>
+                <td>The full URL to a file in a GitHub repository</td>
+                <td><code>https://github.com/user/repo/blob/main/file.js</code></td>
+            </tr>
+            <tr>
+                <td>Line Range (Optional)</td>
+                <td>Specific lines to display from the file</td>
+                <td><code>10-20</code> or <code>15</code></td>
+            </tr>
+            <tr>
+                <td>Theme (Optional)</td>
+                <td>The syntax highlighting theme to use</td>
+                <td>GitHub Light, GitHub Dark, etc.</td>
+            </tr>
+        </table>
+        
+        <h2 id="features">Features</h2>
         <ul>
-            <li>This app fetches code from GitHub repositories specified by users. Only use URLs from trusted sources.</li>
-            <li>Private GitHub repositories are not supported unless the server is configured with a GitHub token.</li>
-            <li>The app uses a server-side renderer to fetch and format code. No user authentication data is sent to GitHub.</li>
+            <li><strong>Live Code Rendering:</strong> The code is fetched directly from GitHub each time the page is viewed, ensuring it's always up to date</li>
+            <li><strong>Syntax Highlighting:</strong> Code is rendered with proper syntax highlighting based on the file extension</li>
+            <li><strong>Line Range Selection:</strong> Display only specific portions of a file by specifying line numbers</li>
+            <li><strong>Multiple Theme Options:</strong> Choose from several syntax highlighting themes to match your Confluence theme</li>
         </ul>
-    </div>
-    
-    <h2 id="troubleshooting">Troubleshooting</h2>
-    
-    <h3>Common Issues</h3>
-    
-    <ul>
-        <li><strong>Macro shows an error message:</strong> Ensure the GitHub URL is valid and points to a specific file.</li>
-        <li><strong>Code doesn't render in Scroll Viewport:</strong> Confirm that your Scroll Viewport theme includes the GitHub Code Renderer script.</li>
-        <li><strong>Syntax highlighting is incorrect:</strong> The language is detected automatically based on the file extension. Try a different theme if the highlighting seems off.</li>
-    </ul>
-    
-    <h3>Getting Support</h3>
-    
-    <p>For support, please contact your Confluence administrator or Apryse technical support.</p>
-    
-    <p>Administrators: <a href="/atlassian-connect.json" target="_blank">View the Atlassian Connect descriptor</a> for technical details about this app.</p>
-    
-    <div class="footer">
-        <p>GitHub Code Renderer v1.1.0</p>
-        <p>&copy; 2024 Apryse. All rights reserved.</p>
+        
+        <h2 id="troubleshooting">Troubleshooting</h2>
+        
+        <h3 id="common-issues">Common Issues</h3>
+        
+        <h4>Error: "GitHub URL is missing or empty"</h4>
+        <div class="error">
+            <p>This error occurs when you try to insert a GitHub Code Block without providing a URL.</p>
+            <p><strong>Solution:</strong> Make sure to enter a valid GitHub URL in the GitHub URL field.</p>
+        </div>
+        
+        <h4>Error: "Failed to fetch code from GitHub"</h4>
+        <div class="error">
+            <p>This error occurs when the app cannot retrieve the code from the provided GitHub URL.</p>
+            <p><strong>Solutions:</strong></p>
+            <ul>
+                <li>Verify that the URL is correct and points to a valid file on GitHub</li>
+                <li>Check if the GitHub repository is private - this app only works with public repositories</li>
+                <li>Ensure the URL format is correct: <code>https://github.com/user/repo/blob/branch/path/to/file</code></li>
+            </ul>
+        </div>
+        
+        <h4>Error: "Invalid line range format"</h4>
+        <div class="error">
+            <p>This error occurs when the line range is not formatted correctly.</p>
+            <p><strong>Solution:</strong> Use the format <code>start-end</code> for a range (e.g., <code>10-20</code>) or just a single number for a single line (e.g., <code>15</code>).</p>
+        </div>
+        
+        <h4>Macro Not Rendering Properly</h4>
+        <div class="warning">
+            <p>If the macro is not rendering properly or shows up as a placeholder, try these steps:</p>
+            <ol>
+                <li>Refresh the Confluence page</li>
+                <li>Edit the macro and save it again without making changes</li>
+                <li>Clear your browser cache and reload the page</li>
+                <li>If you recently updated the app, try uninstalling and reinstalling it</li>
+            </ol>
+        </div>
+        
+        <h3 id="caching-issues">Caching Issues</h3>
+        <p>Confluence may cache content and macros. If you're experiencing issues with the GitHub Code Block not updating:</p>
+        <ol>
+            <li>Try editing the page and saving it without making changes</li>
+            <li>Clear your browser cache</li>
+            <li>Wait a few minutes and refresh the page</li>
+        </ol>
+        
+        <h2 id="security-considerations">Security Considerations</h2>
+        <div class="note">
+            <p><strong>Important:</strong> This app only works with public GitHub repositories. It cannot access private repositories.</p>
+            <p>The app does not store any content from GitHub repositories. It fetches the content directly from GitHub each time the page is viewed.</p>
+        </div>
+        
+        <h2 id="limitations">Limitations</h2>
+        <ul>
+            <li>Only works with public GitHub repositories</li>
+            <li>Maximum file size that can be rendered is 1MB</li>
+            <li>Does not support rendering binary files or images</li>
+            <li>GitHub rate limits may apply if many code blocks are rendered in a short period</li>
+        </ul>
+        
+        <div class="footer">
+            <p>GitHub Code Renderer &copy; 2023 Apryse</p>
+            <p>For support, please contact <a href="mailto:support@apryse.com">support@apryse.com</a></p>
+        </div>
     </div>
 </body>
 </html> 
