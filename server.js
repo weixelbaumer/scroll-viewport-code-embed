@@ -1180,34 +1180,39 @@ function escapeHtml(str) {
        .replace(/'/g, "&#039;");
  }
 
-// NEW ROUTE HANDLER FOR DYNAMIC MACRO RENDERING
+// ROUTE HANDLER FOR DYNAMIC MACRO RENDERING
 app.get('/render-github-macro', (req, res) => {
-  // Extract parameters passed by Confluence from the query string
+  // Extract parameters
   const githubUrl = req.query.url; 
   const lineRange = req.query.lines || ''; 
   const theme = req.query.theme || 'github-light'; 
 
-  // Check User-Agent for Scroll Viewport indicator (adjust pattern if needed)
+  // Check User-Agent 
   const userAgent = req.headers['user-agent'] || '';
-  const isScrollViewport = userAgent.includes('ScrollExporter'); // Simple check
+  const isScrollViewport = userAgent.includes('ScrollExporter');
 
   if (isScrollViewport) {
-    // Output a placeholder structure for Scroll Viewport exports
-    console.log(`Scroll Viewport detected. Rendering placeholder for: ${githubUrl}`); // Add logging
+    // Output a hidden anchor tag containing data attributes
+    console.log(`Scroll Viewport detected. Rendering hidden anchor placeholder for: ${githubUrl}`); 
+
+    // Add specific class and data attributes
+    // Use a dummy href, make it hidden. Content is needed.
     const placeholderHtml = `
-      <div class="gh-code-placeholder-wrapper" 
-           data-url="${escapeAttr(githubUrl)}" 
-           data-lines="${escapeAttr(lineRange)}" 
-           data-theme="${escapeAttr(theme)}">
-        <pre><code>Loading code from ${escapeHtml(githubUrl)}...</code></pre>
-      </div>`; 
+      <a class="gh-code-anchor-placeholder" 
+         href="#gh-placeholder-${Date.now()}" 
+         data-url="${escapeAttr(githubUrl)}" 
+         data-lines="${escapeAttr(lineRange)}" 
+         data-theme="${escapeAttr(theme)}" 
+         style="display:none; visibility:hidden;">
+           GitHub Data Marker
+      </a>`; 
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(placeholderHtml);
 
   } else {
-    // For standard Confluence view, redirect to the existing iframe/HTML view
-    console.log(`Standard Confluence view. Redirecting for: ${githubUrl}`); // Add logging
+    // Standard Confluence view: redirect to /macro-view.html
+    console.log(`Standard Confluence view. Redirecting for: ${githubUrl}`); 
     const redirectUrl = `/macro-view.html?url=${encodeURIComponent(githubUrl)}&lines=${encodeURIComponent(lineRange)}&theme=${encodeURIComponent(theme)}`;
     res.redirect(redirectUrl);
   }

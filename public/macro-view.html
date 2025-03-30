@@ -121,20 +121,46 @@
                             throw new Error("GitHub URL is missing or empty");
                         }
                         
-                        // Use pipe delimiter which is more reliable than colons (URLs contain colons)
-                        // Keep the marker format as simple as possible
-                        const marker = `##GITHUB:${url}|${lines}|${theme}##`;
+                        // --- REMOVED MARKER GENERATION LOGIC --- 
                         
-                        // Update container to ensure proper display and scaling
-                        outputEl.textContent = marker;
-                        outputEl.className = '';
-                        log("Generated marker: " + marker);
-                        
-                        // Make sure the container adjusts to content
-                        outputEl.style.wordBreak = 'break-all';
-                        outputEl.style.overflowWrap = 'break-word';
-                        AP.sizeToParent();
-                        return;
+                        // --- ADDED CODE FETCHING LOGIC FOR STANDARD VIEW ---
+                        outputEl.textContent = 'Loading GitHub code...'; // Show loading state
+                        outputEl.className = 'loading';
+
+                        // Construct URL to fetch the actual rendered HTML from the server
+                        // Using the /html endpoint seems appropriate based on server.js
+                        const fetchUrl = new URL('/html', window.location.origin);
+                        fetchUrl.searchParams.append('url', url);
+                        if (lines) {
+                            fetchUrl.searchParams.append('lines', lines);
+                        }
+                        fetchUrl.searchParams.append('theme', theme);
+
+                        log(`Fetching actual code view from: ${fetchUrl.toString()}`);
+
+                        fetch(fetchUrl.toString())
+                            .then(response => {
+                                if (!response.ok) {
+                                    // Try to get error message from response body
+                                    return response.text().then(text => { 
+                                        throw new Error(`Failed to load code (${response.status}): ${text || response.statusText}`); 
+                                    });
+                                }
+                                return response.text(); // Expecting HTML string
+                            })
+                            .then(html => {
+                                log("Received HTML content, rendering...");
+                                outputEl.innerHTML = html;
+                                outputEl.className = ''; // Remove loading class
+                                // Ensure code block styles apply correctly if they rely on classes within the fetched HTML
+                                AP.sizeToParent(); // Resize iframe to content
+                            })
+                            .catch(error => {
+                                // Show error within the macro view
+                                showError(`Failed to load GitHub code: ${error.message}`);
+                            });
+                        // --- END OF ADDED CODE FETCHING LOGIC ---
+
                     } catch (error) {
                         showError(error.message);
                     }
