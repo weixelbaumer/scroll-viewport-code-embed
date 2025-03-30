@@ -3,66 +3,159 @@
 <head>
     <meta charset="utf-8">
     <title>GitHub Code Block Marker</title>
-    <!-- Include Atlassian Connect JS API -->
-    <script src="https://connect-cdn.atl-paas.net/all.js" async></script>
+    <script src="https://connect-cdn.atl-paas.net/all.js"></script>
     <style>
-        /* Minimal styling for the marker text if needed */
-        body { margin: 0; font-family: monospace; white-space: pre; font-size: 12px; color: #555; }
+        body {
+            margin: 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 14px;
+            color: #333;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+        }
+        .error {
+            color: #D42A2A;
+            font-weight: bold;
+            background-color: #FFEBEE;
+            padding: 10px;
+            border: 1px solid #FFCDD2;
+            border-radius: 4px;
+        }
+        .loading {
+            color: #555;
+            font-style: italic;
+        }
+        .debug {
+            margin-top: 10px;
+            font-size: 10px;
+            color: #999;
+            border-top: 1px dashed #ccc;
+            padding-top: 5px;
+            display: none; /* Hide by default, will show if DEBUG mode is on */
+        }
     </style>
 </head>
 <body>
-    <div id="marker-output">Generating marker...</div>
+    <div id="output" class="loading">Loading GitHub code marker...</div>
+    <div id="debug" class="debug"></div>
 
     <script>
-        // Wait for the Connect API to be ready
-        AP.context.getContext(function(response) {
-            try {
-                const params = response.macro.params || {};
-                // Get parameters from the macro editor (needs implementation if you have one)
-                // For now, we might need placeholder or default values.
-                // IMPORTANT: How are url, lines, theme passed TO this view?
-                // Assuming they are stored as macro parameters named 'url', 'lines', 'theme'
-                const githubUrl = params.url || "INVALID_URL_PLEASE_EDIT_MACRO";
-                const lineRange = params.lines || ""; // Keep empty if not specified
-                const theme = params.theme || "github-light"; // Default theme
-
-                // Construct the marker string
-                // Format: ##GITHUB:url[:lines][:theme]##
-                // Ensure parts are correctly joined with colons, handling optional parts
-                let marker = "##GITHUB:";
-                marker += githubUrl; // Required
-                if (lineRange) {
-                    marker += ":" + lineRange;
-                }
-                // Always include theme, even if default? Or only if non-default?
-                // Let's include it if it's not the default for clarity.
-                if (theme !== 'github-light' || lineRange) { // Include theme if lines are present or theme is non-default
-                     // If lines were skipped, add placeholder for theme position? No, let's adjust parsing.
-                     // Simpler: always include lines (even if empty) if theme is present?
-                     // Let's refine the marker format slightly for easier parsing:
-                     // ##GITHUB:url|lines=1-10|theme=monokai##
-                     // Let's stick to the colon format for now and handle parsing carefully in the theme script.
-                     marker += ":" + (lineRange || ""); // Add lines part (or empty string)
-                     marker += ":" + theme;             // Add theme part
-                } else if (lineRange) {
-                     marker += ":" + lineRange; // Add lines if present, but theme is default
-                }
-                 // Let's simplify marker: ##GITHUB:url:lines:theme## always, use "" for empty lines
-                marker = `##GITHUB:${githubUrl}:${lineRange}:${theme}##`;
-
-
-                // Output the marker text directly into the body
-                // Using textContent to avoid HTML interpretation
-                document.getElementById('marker-output').textContent = marker;
-
-                // Resize iframe to fit the marker text (optional, might not be needed)
-                AP.sizeToParent();
-            } catch (error) {
-                 console.error("Error generating marker:", error);
-                 document.getElementById('marker-output').textContent = "##ERROR_GENERATING_MARKER##";
-                 AP.sizeToParent();
+        // Constants
+        const DEBUG = false; // Set to true to show debug info in the output
+        
+        // Log helper function
+        function log(message) {
+            console.log(`[GitHub Marker View] ${message}`);
+            if (DEBUG) {
+                const debugEl = document.getElementById('debug');
+                debugEl.style.display = 'block';
+                debugEl.textContent += message + '\n';
             }
+        }
+
+        // Error display function
+        function showError(message) {
+            log(`ERROR: ${message}`);
+            const outputEl = document.getElementById('output');
+            outputEl.innerHTML = `<div class="error">##ERROR: ${message}##</div>
+<div style="margin-top: 10px; font-size: 12px; text-align: center;">
+  <a href="/documentation.html#troubleshooting" target="_blank" style="color: #0052CC; text-decoration: none;">
+    View troubleshooting documentation
+  </a>
+</div>`;
+            AP.sizeToParent();
+        }
+
+        // Initialize the marker view
+        function initMarkerView() {
+            log("Initializing marker view");
+
+            try {
+                // Check if AP is available
+                if (typeof AP === 'undefined') {
+                    log("AP is not defined yet, waiting...");
+                    setTimeout(initMarkerView, 500);
+                    return;
+                }
+
+                log("AP is available, getting macro data");
+                
+                // Load macro data from Confluence
+                AP.confluence.getMacroData(function(data) {
+                    log("Macro data received: " + JSON.stringify(data));
+                    const outputEl = document.getElementById('output');
+                    
+                    try {
+                        // Check if we have data
+                        if (!data) {
+                            throw new Error("No macro data received from Confluence");
+                        }
+                        
+                        // Check if we have the marker directly (from editor)
+                        if (data.marker) {
+                            log("Found marker in macro data: " + data.marker);
+                            outputEl.textContent = data.marker;
+                            outputEl.className = '';
+                            AP.sizeToParent();
+                            return;
+                        }
+                        
+                        // Alternative: Try to reconstruct the marker from individual fields
+                        if (data.url) {
+                            const url = data.url.trim();
+                            const lines = (data.lines || '').trim();
+                            const theme = data.theme || 'github-light';
+                            
+                            log(`Reconstructing marker from fields - URL: ${url}, Lines: ${lines}, Theme: ${theme}`);
+                            
+                            if (!url) {
+                                throw new Error("GitHub URL is missing or empty");
+                            }
+                            
+                            // Use pipe delimiter which is more reliable than colons (URLs contain colons)
+                            // Keep the marker format as simple as possible
+                            const marker = `##GITHUB:${url}|${lines}|${theme}##`;
+                            
+                            // Update container to ensure proper display and scaling
+                            outputEl.textContent = marker;
+                            outputEl.className = '';
+                            log("Generated marker: " + marker);
+                            
+                            // Make sure the container adjusts to content
+                            outputEl.style.wordBreak = 'break-all';
+                            outputEl.style.overflowWrap = 'break-word';
+                            AP.sizeToParent();
+                            return;
+                        }
+                        
+                        // If we get here, we don't have any valid data
+                        throw new Error("No GitHub URL found. Please edit the macro and add a GitHub URL.");
+                        
+                    } catch (error) {
+                        showError(error.message);
+                    }
+                });
+            } catch (err) {
+                showError("Failed to initialize: " + err.message);
+            }
+        }
+
+        // Start initialization
+        log("Script started");
+        document.addEventListener('DOMContentLoaded', function() {
+            log("DOM loaded");
+            initMarkerView();
         });
+
+        // In case DOMContentLoaded already fired
+        if (document.readyState !== 'loading') {
+            log("DOM already loaded, initializing immediately");
+            initMarkerView();
+        }
     </script>
 </body>
 </html> 

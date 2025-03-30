@@ -1,7 +1,8 @@
 {
-    "key": "github-code-renderer",
-    "name": "Apryse GitHub Code Renderer",
-    "description": "Render GitHub code snippets for embedding in Confluence",
+    "key": "apryse-gh-live-renderer",
+    "name": "Apryse GitHub Code Live Renderer",
+    "description": "Live fetch and render GitHub code snippets for embedding in Confluence",
+    "version": "1.1.0",
     "baseUrl": "https://dev.tandav.com",
     "vendor": {
         "name": "Apryse",
@@ -10,64 +11,42 @@
     "authentication": {
         "type": "none"
     },
+    "apiMigrations": {
+        "gdpr": true
+    },
     "apiVersion": 1,
+    "links": {
+        "documentation": "/documentation.html",
+        "self": "/atlassian-connect.json",
+        "homepage": "/",
+        "support": "/documentation.html#troubleshooting",
+        "issues": "/documentation.html#troubleshooting",
+        "privacy": "/documentation.html#security-considerations"
+    },
     "modules": {
-        "generalPages": [
-            {
-                "key": "github-code-renderer",
-                "location": "system.top.navigation.bar",
-                "name": {
-                    "value": "Apryse GitHub Code Renderer"
-                },
-                "url": "/index.html"
-            }
-        ],
         "dynamicContentMacros": [
             {
-                "key": "github-code-block",
-                "name": {
-                    "value": "GitHub Code Block"
-                },
+                "key": "github-code-macro",
+                "name": { "value": "GitHub Code Block" },
                 "url": "/macro-view.html",
-                "description": {
-                    "value": "Embed code from GitHub repositories. Renders as a marker for Scroll Viewport."
-                },
+                "description": { "value": "Live fetch and render code from GitHub repositories" },
                 "outputType": "block",
                 "bodyType": "none",
-                "parameters": [
-                    {
-                        "identifier": "url",
-                        "name": {
-                            "value": "GitHub File URL"
-                        },
-                        "description": {
-                            "value": "Full URL to the file on GitHub (e.g., https://github.com/user/repo/blob/main/file.js)"
-                        },
-                        "type": "string",
-                        "required": true
-                    },
-                    {
-                        "identifier": "lines",
-                        "name": {
-                            "value": "Line Range (Optional)"
-                        },
-                        "description": {
-                            "value": "e.g., 5-15 or 10"
-                        },
-                        "type": "string",
-                        "required": false
-                    },
-                    {
-                        "identifier": "theme",
-                        "name": {
-                            "value": "Theme"
-                        },
-                        "type": "enum",
-                        "values": ["github-light", "github-dark", "monokai", "dracula", "vs2015", "xcode", "atom-one-dark"],
-                        "defaultValue": "github-light",
-                        "required": false
-                    }
-                ]
+                "editor": {
+                    "url": "/macro-editor.html",
+                    "width": "80%",
+                    "height": "400px"
+                }
+            }
+        ],
+        "generalPages": [
+            {
+                "key": "documentation",
+                "location": "system.help/pages",
+                "name": {
+                    "value": "GitHub Code Renderer Documentation"
+                },
+                "url": "/documentation.html"
             }
         ]
     }

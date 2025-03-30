@@ -53,8 +53,8 @@
       try {
         var text = textNode.nodeValue;
         
-        // Fixed regex to handle both github.com and raw.githubusercontent.com URLs
-        var regex = /##GITHUB:(https?:\/\/(?:github\.com|raw\.githubusercontent\.com)\/[^#]+)(?::([^:]+))?(?::([^#]+))?##/g;
+        // Updated regex to use pipe delimiters instead of colons
+        var regex = /##GITHUB:(https?:\/\/(?:github\.com|raw\.githubusercontent\.com)\/[^#]+)(?:\|([^|]+))?(?:\|([^#]+))?##/g;
         var matches = [];
         var match;
         

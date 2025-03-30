@@ -1,138 +1,131 @@
-# GitHub Code Renderer for Confluence and Scroll Viewport
+# GitHub Code Renderer for Confluence & Scroll Viewport
 
-This service provides a way to embed GitHub code snippets with syntax highlighting in Confluence pages, especially when using K15T Scroll Viewport for documentation publishing.
+A Confluence app that allows users to easily embed syntax-highlighted code from GitHub repositories into Confluence pages, with full compatibility for Scroll Viewport.
+
+## Overview
+
+This app provides two key components:
+
+1. **GitHub Code Block Macro** - A Confluence macro that makes it easy to embed code snippets from GitHub.
+2. **Scroll Viewport Integration** - Special handling to ensure code blocks render correctly in Scroll Viewport documentation.
 
 ## Features
 
-- Fetch code from GitHub repositories (public and private with token)
-- Apply syntax highlighting with multiple theme options
-- Extract specific line ranges from files
-- Generate static HTML for embedding in Confluence
-- Provide a JavaScript API for dynamic rendering
-- Include an Atlassian Connect app for native Confluence integration
-
-## Integration Methods
-
-The GitHub Code Renderer provides several methods for integrating GitHub code snippets:
-
-### 1. Atlassian Connect Macro (Recommended)
-
-A custom Confluence macro that allows users to easily insert and configure GitHub code snippets. This is the most user-friendly and robust solution, especially for Scroll Viewport compatibility.
-
-[Learn more about the Atlassian Connect app](./atlassian-connect/README.md)
-
-### 2. Direct HTML Embedding
-
-Use the `/html` endpoint to get HTML that can be directly embedded in Confluence via the HTML macro.
-
-Example:
-```
-GET /html?url=https://github.com/user/repo/blob/main/file.js
-```
-
-### 3. JavaScript API
-
-Use the `/render` endpoint for a JavaScript interface that dynamically renders code.
-
-### 4. Scroll Viewport Text Marker
-
-For Scroll Viewport Cloud, which filters HTML macros, a text marker approach can be used with custom JavaScript in the Scroll Viewport theme.
-
-[Learn more about Scroll Viewport integration](./public/scroll-viewport.html)
+- Embed code directly from GitHub repositories
+- Syntax highlighting for various programming languages
+- Multiple themes including light and dark modes
+- Line range selection to display only relevant portions of code
+- Special handling for Scroll Viewport compatibility
+- Direct HTML output option for manual embedding
 
 ## Installation
 
-1. Clone this repository
-2. Install dependencies:
+### Prerequisites
+
+- Node.js 14+ and npm
+- Cloudflare Account and `cloudflared` CLI tool installed and logged in (`cloudflared login`)
+- A registered domain managed by Cloudflare (in this case, `tandav.com`)
+
+### Development Setup
+
+1. **Configure Cloudflare Tunnel**
+
+   ```bash
+   cloudflared tunnel create github-fetcher-dev
    ```
+   *(Note the Tunnel ID and the path to the `.json` credentials file)*
+
+   Create Config File (`~/.cloudflared/config.yml`):
+   Ensure the `credentials-file` path uses the *full absolute path*.
+   ```yaml
+   tunnel: github-fetcher-dev
+   credentials-file: /Users/<your_user>/.cloudflared/<TUNNEL_ID>.json
+   ingress:
+     - hostname: dev.tandav.com
+       service: http://localhost:3000
+     - service: http_status:404
+   ```
+
+   Route DNS:
+   ```bash
+   cloudflared tunnel route dns github-fetcher-dev dev.tandav.com
+   ```
+
+   Update `atlassian-connect.json`:
+   Ensure the `baseUrl` in `atlassian-connect.json` matches your tunnel hostname:
+   ```json
+   {
+       "baseUrl": "https://dev.tandav.com",
+   }
+   ```
+
+2. **Run the Application**
+
+   Install Dependencies:
+   ```bash
    npm install
    ```
-3. Configure environment variables (copy `.env.example` to `.env`)
-4. Start the server:
-   ```
+
+   Start the Server:
+   ```bash
    npm start
    ```
 
-## Configuration
+   Start the Tunnel:
+   ```bash
+   cloudflared tunnel --config ~/.cloudflared/config.yml run github-fetcher-dev
+   ```
+   *(Your app should now be accessible at `https://dev.tandav.com`)*
 
-Environment variables can be set in a `.env` file:
+## Installing the Confluence App
 
-- `PORT`: Server port (default: 3000)
-- `GITHUB_TOKEN`: GitHub personal access token for private repos
-- `CACHE_DURATION`: Cache duration in milliseconds (default: 30 minutes)
-- `ALLOWED_ORIGINS`: Comma-separated list of allowed origins for CORS
-- `DEBUG`: Enable debug logging (true/false)
-- `DEFAULT_THEME`: Default syntax highlight theme (default: github)
+1. Log in to your Confluence instance as an administrator
+2. Go to Settings > Manage apps
+3. Click "Upload app"
+4. Enter the URL to your hosted atlassian-connect.json descriptor:
+   ```
+   https://dev.tandav.com/atlassian-connect.json
+   ```
+5. Follow the prompts to complete installation
 
-## API Endpoints
+## Configure Scroll Viewport Theme (Required for Viewport Rendering)
 
-### HTML Endpoint
+1. Go to Confluence Admin -> Scroll Viewport -> Your Theme -> Theme Settings.
+2. Find the "Custom JavaScript" section.
+3. Add the following script tag:
+   ```html
+   <script src="https://dev.tandav.com/theme-script.js" defer></script>
+   ```
+4. Save the theme settings.
 
-```
-GET /html?url=GITHUB_URL&theme=THEME&lines=LINES
-```
+## Usage
 
-Parameters:
-- `url` (required): GitHub URL to the file
-- `theme` (optional): Syntax highlighting theme (github, github-dark, monokai, atom-one-dark, vs2015, xcode, dracula)
-- `lines` (optional): Line range to extract (e.g., 10-20)
+### Adding a GitHub Code Block to a Confluence Page
 
-### Render Endpoint
+1. Edit your Confluence page
+2. Click the '+' icon to add a macro
+3. Search for and select "GitHub Code Block"
+4. In the macro editor:
+   - Enter the full GitHub URL to the file you want to display
+   - Optionally, specify a line range (e.g., "5-15" or "10" for a single line)
+   - Select a syntax highlighting theme
+5. Click "Insert" to add the macro to the page
+6. Save your Confluence page
 
-```
-GET /render?url=GITHUB_URL&theme=THEME&lines=LINES
-```
+### Scroll Viewport Integration
 
-Parameters are the same as for the HTML endpoint.
+When your content is viewed through Scroll Viewport, the code block will be automatically rendered with syntax highlighting. The macro outputs a special marker that Scroll Viewport's theme script processes to display beautifully formatted code.
 
-### Scroll Viewport Script
+## Supported GitHub URLs
 
-```
-GET /scroll-viewport-script?url=GITHUB_URL&theme=THEME&lines=LINES
-```
+You can use any of these URL formats:
+- Regular GitHub file URLs: `https://github.com/owner/repo/blob/branch/path/to/file.js`
+- Raw GitHub content URLs: `https://raw.githubusercontent.com/owner/repo/branch/path/to/file.js`
 
-Returns a JavaScript file that can be used in a script tag to render GitHub code.
+## License
 
-### Atlassian Connect
+Copyright © 2024 Apryse. All rights reserved.
 
-```
-GET /atlassian-connect
-```
+## Support
 
-Returns the Atlassian Connect descriptor for the GitHub Code macro.
-
-## Deployment
-
-### Docker
-
-A Dockerfile is provided to containerize the application:
-
-```
-docker build -t github-code-renderer .
-docker run -p 3000:3000 -e GITHUB_TOKEN=your_token github-code-renderer
-```
-
-### Hosting
-
-The service can be deployed to any hosting platform that supports Node.js applications, such as:
-
-- Heroku
-- AWS Elastic Beanstalk
-- Google Cloud Run
-- Azure App Service
-
-For production use, ensure the service is secured with HTTPS.
-
-## GitHub Token
-
-For private repositories or to increase rate limits, set the `GITHUB_TOKEN` environment variable with a GitHub personal access token.
-
-Create a token at https://github.com/settings/tokens with the "repo" scope for private repos.
-
-## Security Considerations
-
-- Only fetch from trusted GitHub repositories
-- Configure CORS to restrict access from unauthorized domains
-- Use HTTPS in production to encrypt data in transit
-- Validate input parameters to prevent injection attacks
-- Be cautious with displayed code content that might contain sensitive information 
+For support, please contact your Confluence administrator or Apryse technical support. 

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>GitHub Code Block Editor</title>
+    <!-- Load the Atlassian Connect JS without async to ensure it's available -->
+    <script src="https://connect-cdn.atl-paas.net/all.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+            color: #172B4D;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #DFE1E6;
+            border-radius: 3px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        input[type="text"]:focus, select:focus {
+            border-color: #4C9AFF;
+            outline: none;
+        }
+        .field-description {
+            color: #6B778C;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .error {
+            color: #DE350B;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .button-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        button {
+            background-color: #0052CC;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0065FF;
+        }
+        button.secondary {
+            background-color: #F4F5F7;
+            color: #42526E;
+            margin-right: 8px;
+        }
+        button.secondary:hover {
+            background-color: #EBECF0;
+        }
+        .field-example {
+            font-style: italic;
+            font-size: 12px;
+            color: #6B778C;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 3px;
+        }
+        .status.success {
+            background-color: #E3FCEF;
+            color: #006644;
+        }
+        .status.error {
+            background-color: #FFEBE6;
+            color: #DE350B;
+        }
+        #status-message {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="editor-content">
+        <div class="form-group">
+            <label for="url">GitHub URL <span style="color: #DE350B">*</span></label>
+            <input type="text" id="url" placeholder="https://github.com/user/repo/blob/main/path/to/file.js" />
+            <div class="field-description">
+                Full URL to the file on GitHub. 
+                <div class="field-example">
+                    Example: https://github.com/apryse/github-fetcher/blob/main/src/server.js
+                </div>
+            </div>
+            <div id="url-error" class="error" style="display: none;">Please enter a valid GitHub URL</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="lines">Line Range (Optional)</label>
+            <input type="text" id="lines" placeholder="e.g., 10-20 or 15" />
+            <div class="field-description">
+                Specific lines to display. Leave empty to show the entire file.
+                <div class="field-example">
+                    Example formats: "5-15" for a range or "10" for a single line
+                </div>
+            </div>
+            <div id="lines-error" class="error" style="display: none;">Please enter a valid line range (e.g., 10-20 or 15)</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="theme">Theme</label>
+            <select id="theme">
+                <option value="github-light">GitHub Light</option>
+                <option value="github-dark">GitHub Dark</option>
+                <option value="monokai">Monokai</option>
+                <option value="dracula">Dracula</option>
+                <option value="vs2015">Visual Studio 2015</option>
+                <option value="xcode">Xcode</option>
+                <option value="atom-one-dark">Atom One Dark</option>
+            </select>
+            <div class="field-description">
+                Syntax highlighting theme for the code block
+            </div>
+        </div>
+        
+        <div id="status-message" class="status"></div>
+
+        <div class="button-container">
+            <button type="button" class="secondary" id="cancel-btn">Cancel</button>
+            <button type="button" id="save-btn">Insert</button>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <a href="/documentation.html" target="_blank" style="color: #0052CC; text-decoration: none; font-size: 13px;">
+                Need help? View documentation
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Debug logging helper
+        function log(message) {
+            console.log(`[GitHub Code Editor] ${message}`);
+        }
+
+        // Check if we're in an iframe and the AP object exists
+        const isInIframe = window !== window.parent;
+        const hasAP = typeof AP !== 'undefined';
+        
+        log(`Editor loaded. In iframe: ${isInIframe}, AP available: ${hasAP}`);
+
+        // Initialize editor once document is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            log('DOM loaded, initializing editor...');
+            initializeEditor();
+        });
+
+        function initializeEditor() {
+            try {
+                // If AP isn't available yet, wait a bit and try again
+                if (typeof AP === 'undefined') {
+                    log('AP not available yet, waiting...');
+                    setTimeout(initializeEditor, 500);
+                    return;
+                }
+
+                log('AP is available, getting macro data');
+                
+                // Check if we're editing an existing macro or creating a new one
+                AP.confluence.getMacroData(function(data) {
+                    log(`Macro data received: ${JSON.stringify(data)}`);
+                    
+                    // Fill fields with existing data if available
+                    if (data) {
+                        document.getElementById('url').value = data.url || '';
+                        document.getElementById('lines').value = data.lines || '';
+                        document.getElementById('theme').value = data.theme || 'github-light';
+                    }
+                });
+
+                // Save button handler
+                document.getElementById('save-btn').addEventListener('click', function() {
+                    log('Save button clicked');
+                    saveMacro();
+                });
+
+                // Cancel button handler
+                document.getElementById('cancel-btn').addEventListener('click', function() {
+                    log('Cancel button clicked');
+                    AP.confluence.closeMacroEditor();
+                });
+            } catch (err) {
+                log(`Error initializing editor: ${err.message}`);
+                showStatus('error', `Error initializing editor: ${err.message}`);
+            }
+        }
+
+        // Utility functions
+        function validateUrl(url) {
+            return url && (url.includes('github.com') || url.includes('githubusercontent.com'));
+        }
+
+        function validateLineRange(range) {
+            if (!range) return true; // Optional
+            return /^\d+(-\d+)?$/.test(range);
+        }
+
+        function showStatus(type, message) {
+            const statusEl = document.getElementById('status-message');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(function() {
+                statusEl.style.display = 'none';
+            }, 5000);
+        }
+
+        function saveMacro() {
+            try {
+                // Get values
+                const url = document.getElementById('url').value.trim();
+                const lines = document.getElementById('lines').value.trim();
+                const theme = document.getElementById('theme').value;
+                
+                log(`Validating inputs - URL: ${url}, Lines: ${lines}, Theme: ${theme}`);
+                
+                // Validate URL (required)
+                const urlValid = validateUrl(url);
+                document.getElementById('url-error').style.display = urlValid ? 'none' : 'block';
+                
+                // Validate line range (optional)
+                const linesValid = validateLineRange(lines);
+                document.getElementById('lines-error').style.display = linesValid ? 'none' : 'block';
+                
+                // If any validation fails, stop here
+                if (!urlValid || !linesValid) {
+                    log('Validation failed');
+                    return;
+                }
+                
+                // Simplify the URL if it's too long
+                const displayUrl = url.length > 100 ? url.substring(0, 97) + '...' : url;
+                
+                // Construct macroData to store it with the macro instance
+                // Use a clean structure with just the necessary parameters
+                const macroData = {
+                    url: url,
+                    lines: lines,
+                    theme: theme
+                };
+                
+                log(`Saving macro data: ${JSON.stringify(macroData)}`);
+                
+                // Save the macro using the Atlassian Connect API
+                AP.confluence.saveMacro({
+                    macroData: macroData,
+                    callback: function() {
+                        log('Macro saved successfully');
+                        showStatus('success', 'GitHub code block inserted successfully!');
+                        
+                        // Give a moment for the user to see the success message
+                        setTimeout(function() {
+                            AP.confluence.closeMacroEditor();
+                        }, 500);
+                    }
+                });
+            } catch (err) {
+                log(`Error saving macro: ${err.message}`);
+                showStatus('error', `Error saving macro: ${err.message}`);
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>GitHub Code Renderer Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.5;
+            color: #172B4D;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #0052CC;
+            border-bottom: 1px solid #DFE1E6;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        h2 {
+            color: #0052CC;
+            margin-top: 30px;
+            font-size: 20px;
+        }
+        p, ul, ol {
+            margin-bottom: 16px;
+        }
+        code {
+            background-color: #F4F5F7;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 14px;
+        }
+        pre {
+            background-color: #F4F5F7;
+            padding: 15px;
+            border-radius: 3px;
+            overflow-x: auto;
+            border: 1px solid #DFE1E6;
+        }
+        pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        .note {
+            background-color: #E3FCEF;
+            border-left: 4px solid #36B37E;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 3px;
+        }
+        .warning {
+            background-color: #FFFAE6;
+            border-left: 4px solid #FFAB00;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 3px;
+        }
+        img {
+            max-width: 100%;
+            border: 1px solid #DFE1E6;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        .footer {
+            margin-top: 50px;
+            border-top: 1px solid #DFE1E6;
+            padding-top: 20px;
+            font-size: 14px;
+            color: #6B778C;
+        }
+    </style>
+</head>
+<body>
+    <h1>GitHub Code Renderer Documentation</h1>
+    
+    <p>The GitHub Code Renderer allows you to easily embed syntax-highlighted code from GitHub repositories into your Confluence pages, with full compatibility for Scroll Viewport.</p>
+    
+    <div class="note">
+        <strong>Version:</strong> 1.1.0<br>
+        <strong>Vendor:</strong> Apryse
+    </div>
+    
+    <h2>Overview</h2>
+    
+    <p>This app provides two key components:</p>
+    
+    <ol>
+        <li><strong>GitHub Code Block Macro</strong> - A Confluence macro that makes it easy to embed code snippets from GitHub.</li>
+        <li><strong>Scroll Viewport Integration</strong> - Special handling to ensure code blocks render correctly in Scroll Viewport documentation.</li>
+    </ol>
+    
+    <h2>How to Use</h2>
+    
+    <h3>Adding a GitHub Code Block to a Confluence Page</h3>
+    
+    <ol>
+        <li>Edit your Confluence page</li>
+        <li>Click the '+' icon to add a macro</li>
+        <li>Search for and select "GitHub Code Block"</li>
+        <li>In the macro editor:
+            <ul>
+                <li>Enter the full GitHub URL to the file you want to display</li>
+                <li>Optionally, specify a line range (e.g., "5-15" or "10" for a single line)</li>
+                <li>Select a syntax highlighting theme</li>
+            </ul>
+        </li>
+        <li>Click "Insert" to add the macro to the page</li>
+        <li>Save your Confluence page</li>
+    </ol>
+    
+    <h3>Scroll Viewport Integration</h3>
+    
+    <p>When your content is viewed through Scroll Viewport, the code block will be automatically rendered with syntax highlighting. The macro outputs a special marker that Scroll Viewport's theme script processes to display beautifully formatted code.</p>
+    
+    <div class="note">
+        <strong>Important:</strong> To enable Scroll Viewport integration, your Scroll Viewport theme must include the GitHub Code Renderer theme script. Contact your Confluence administrator if code blocks aren't rendering correctly in Scroll Viewport.
+    </div>
+    
+    <h2>Supported GitHub URLs</h2>
+    
+    <p>You can use any of these URL formats:</p>
+    
+    <ul>
+        <li>Regular GitHub file URLs: <code>https://github.com/owner/repo/blob/branch/path/to/file.js</code></li>
+        <li>Raw GitHub content URLs: <code>https://raw.githubusercontent.com/owner/repo/branch/path/to/file.js</code></li>
+    </ul>
+    
+    <h2>Line Range Format</h2>
+    
+    <p>You can specify which lines to display using these formats:</p>
+    
+    <ul>
+        <li>Range: <code>5-15</code> (displays lines 5 through 15)</li>
+        <li>Single line: <code>10</code> (displays only line 10)</li>
+    </ul>
+    
+    <h2>Available Themes</h2>
+    
+    <p>The following syntax highlighting themes are available:</p>
+    
+    <ul>
+        <li>GitHub Light (default)</li>
+        <li>GitHub Dark</li>
+        <li>Monokai</li>
+        <li>Dracula</li>
+        <li>Visual Studio 2015</li>
+        <li>Xcode</li>
+        <li>Atom One Dark</li>
+    </ul>
+    
+    <h2>Security Considerations</h2>
+    
+    <div class="warning">
+        <strong>Important Security Notice:</strong>
+        <ul>
+            <li>This app fetches code from GitHub repositories specified by users. Only use URLs from trusted sources.</li>
+            <li>Private GitHub repositories are not supported unless the server is configured with a GitHub token.</li>
+            <li>The app uses a server-side renderer to fetch and format code. No user authentication data is sent to GitHub.</li>
+        </ul>
+    </div>
+    
+    <h2 id="troubleshooting">Troubleshooting</h2>
+    
+    <h3>Common Issues</h3>
+    
+    <ul>
+        <li><strong>Macro shows an error message:</strong> Ensure the GitHub URL is valid and points to a specific file.</li>
+        <li><strong>Code doesn't render in Scroll Viewport:</strong> Confirm that your Scroll Viewport theme includes the GitHub Code Renderer script.</li>
+        <li><strong>Syntax highlighting is incorrect:</strong> The language is detected automatically based on the file extension. Try a different theme if the highlighting seems off.</li>
+    </ul>
+    
+    <h3>Getting Support</h3>
+    
+    <p>For support, please contact your Confluence administrator or Apryse technical support.</p>
+    
+    <p>Administrators: <a href="/atlassian-connect.json" target="_blank">View the Atlassian Connect descriptor</a> for technical details about this app.</p>
+    
+    <div class="footer">
+        <p>GitHub Code Renderer v1.1.0</p>
+        <p>&copy; 2024 Apryse. All rights reserved.</p>
+    </div>
+</body>
+</html> 

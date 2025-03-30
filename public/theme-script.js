@@ -30,8 +30,8 @@
                 const fragment = document.createDocumentFragment();
                 let lastIndex = 0;
                 let match;
-                // Find all markers ##GITHUB:url:lines:theme##
-                const regex = /##GITHUB:([^:]+):([^:]*):([^#]+)##/g;
+                // Find all markers ##GITHUB:url|lines|theme##
+                const regex = /##GITHUB:([^|#]+)\|([^|#]*)\|([^|#]+)##/g;
 
                 while ((match = regex.exec(text)) !== null) {
                     const markerText = match[0];
