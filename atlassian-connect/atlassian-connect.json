@@ -2,9 +2,8 @@
     "name": "GitHub Code Renderer",
     "description": "Renders code snippets from GitHub with syntax highlighting for Scroll Viewport",
     "key": "com.apryse.github-code-renderer",
-    "baseUrl": "https://35be-90-146-230-192.ngrok-free.app",
+    "baseUrl": "https://dev.tandav.com",
     "requestHeaders": {
-        "ngrok-skip-browser-warning": "true",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36",
         "X-Requested-With": "XMLHttpRequest"
     },

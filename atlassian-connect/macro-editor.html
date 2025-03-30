@@ -3,88 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="ngrok-skip-browser-warning" content="true">
-  <script>
-    // Inline ngrok bypass script for immediate execution
-    (function() {
-      console.log("Running inline ngrok bypass script");
-      
-      // First, try to break out of an iframe if we're in one
-      if (window !== window.top) {
-        try {
-          console.log("Attempting to break out of iframe");
-          window.top.location.href = window.location.href;
-        } catch (e) {
-          console.error("Failed to break out of iframe:", e);
-        }
-      }
-
-      // Override ngrok warning functions
-      window.ngrokCheckParentFrameIsNotNgrok = function() { return true; };
-      window.ngrokWarnUserIfParentFrameIsNgrok = function() { return false; };
-
-      // Make sure these are also overridden on window.self
-      if (window.self) {
-        window.self.ngrokCheckParentFrameIsNotNgrok = function() { return true; };
-        window.self.ngrokWarnUserIfParentFrameIsNgrok = function() { return false; };
-      }
-
-      // Auto-click Visit Site function
-      function clickVisitSite() {
-        console.log("Looking for Visit Site button");
-        try {
-          // Try multiple selectors to find the Visit Site button
-          const selectors = ['a.button', 'button.button', 'a.btn', 'button.btn', '[role="button"]', 'a'];
-          
-          for (const selector of selectors) {
-            const elements = document.querySelectorAll(selector);
-            for (const element of elements) {
-              if (element.textContent && element.textContent.trim() === 'Visit Site') {
-                console.log('Found "Visit Site" button, clicking it');
-                element.click();
-                return true;
-              }
-            }
-          }
-          
-          // Last resort: find any element with Visit Site text
-          const allElements = document.querySelectorAll('*');
-          for (const element of allElements) {
-            if (element.textContent && element.textContent.trim() === 'Visit Site') {
-              console.log('Found element with "Visit Site" text, clicking it');
-              element.click();
-              return true;
-            }
-          }
-        } catch (e) {
-          console.error("Error in click function:", e);
-        }
-        return false;
-      }
-
-      // Try immediately
-      clickVisitSite();
-      
-      // And try again multiple times with increasing delays
-      setTimeout(clickVisitSite, 300);
-      setTimeout(clickVisitSite, 600);
-      setTimeout(clickVisitSite, 1000);
-      setTimeout(clickVisitSite, 2000);
-      
-      // Also when the page loads
-      window.addEventListener('load', function() {
-        clickVisitSite();
-        setTimeout(clickVisitSite, 500);
-      });
-      
-      // And when mutation happens in the DOM
-      if (window.MutationObserver) {
-        new MutationObserver(function() {
-          clickVisitSite();
-        }).observe(document.documentElement, {childList: true, subtree: true});
-      }
-    })();
-  </script>
   <title>GitHub Code Macro - Editor</title>
   <link rel="stylesheet" href="https://unpkg.com/aui@9.4.0/dist/aui/aui-prototyping.css">
   <script src="https://unpkg.com/aui@9.4.0/dist/aui/aui-prototyping.js"></script>
@@ -279,8 +197,7 @@
         // Fetch the preview
         fetch(previewUrl, {
           headers: {
-            'User-Agent': 'Mozilla/5.0',
-            'ngrok-skip-browser-warning': 'true'
+            'User-Agent': 'Mozilla/5.0'
           }
         })
         .then(response => {

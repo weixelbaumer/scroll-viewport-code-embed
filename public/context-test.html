@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Context Test</title>
+    <script src="https://connect-cdn.atl-paas.net/all.js"></script>
+    <style>body { font-family: monospace; white-space: pre-wrap; word-break: break-all; font-size: 12px; }</style>
+</head>
+<body>
+    <h1>Context Test</h1>
+    <pre id="output">Loading context...</pre>
+    <script>
+        console.log("Context Test: Waiting for getContext...");
+        try {
+            AP.context.getContext(function(response) {
+                console.log("Context Test: getContext callback fired.");
+                document.getElementById('output').textContent = JSON.stringify(response, null, 2);
+                AP.sizeToParent(); // Resize iframe
+            });
+        } catch (err) {
+            console.error("Context Test: Error calling getContext", err);
+            document.getElementById('output').textContent = "ERROR calling getContext: " + err.message;
+        }
+    </script>
+</body>
+</html> 
