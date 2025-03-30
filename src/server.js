@@ -48,34 +48,41 @@ app.post('/macro', cors(), async (req, res) => {
     }
 });
 
-// HTML endpoint (GET - for Viewport theme script)
+// GET /html endpoint (for theme script)
 app.get('/html', async (req, res) => {
-    const { url, lines, theme = 'github-light' } = req.query; // Use 'lines' from query
-    console.log('Received /html GET request:', { url, lines, theme });
+    const { url, lines, theme = 'github-light' } = req.query;
+    logDebug(`Received /html GET request: URL=${url}, Lines=${lines}, Theme=${theme}`); // Add server-side logging
     try {
         const rawUrl = githubHelper.normalizeGitHubUrl(url);
-        // Pass 'lines' (from query) as lineRange argument
         const code = await githubHelper.fetchGitHubContent(rawUrl, lines);
         const html = githubHelper.generateCodeBlock(code, rawUrl, theme);
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
     } catch (error) {
-        console.error('/html GET error:', error);
+        console.error('/html GET error:', error); // Log error server-side
         res.status(400).setHeader('Content-Type', 'text/plain');
         res.send(`Error loading GitHub code: ${error.message}`);
     }
 });
 
-// Serve atlassian-connect.json
+// GET /atlassian-connect.json
 app.get('/atlassian-connect.json', (req, res) => {
-    console.log('Serving atlassian-connect.json');
+    logDebug('Serving atlassian-connect.json');
     res.sendFile(path.join(__dirname, '../atlassian-connect.json'));
 });
 
 // Serve macro view/editor files (if needed)
 // This is handled by express.static if they are in 'public'
 
+// Optional: Add a root handler or test endpoint
+app.get('/', (req, res) => res.send('GitHub Renderer App is running.'));
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
-}); 
+});
+
+// Simple logger function for server-side
+function logDebug(message) {
+    console.log(`[Server Log] ${new Date().toISOString()}: ${message}`);
+} 
