@@ -2,7 +2,7 @@
     "key": "com.apryse.github-fetcher",
     "name": "GitHub Fetcher",
     "description": "Renders code snippets from GitHub with syntax highlighting for Scroll Viewport",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "baseUrl": "https://dev.tandav.com",
     "vendor": {
         "name": "Apryse",
@@ -30,7 +30,7 @@
                 "name": { 
                     "value": "GitHub Code Block" 
                 },
-                "url": "/macro-view.html",
+                "url": "/render-github-macro",
                 "description": { 
                     "value": "Live fetch and render code from GitHub repositories" 
                 },

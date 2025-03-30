@@ -1160,6 +1160,59 @@ app.get('/raw', async (req, res) => {
   }
 });
 
+// Helper functions for escaping HTML (add if not already present in server.js)
+function escapeAttr(str) {
+  // Basic escaping for HTML attributes
+  return (str || '').toString()
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+function escapeHtml(str) {
+  // Basic escaping for HTML content
+   return (str || '').toString()
+       .replace(/&/g, "&amp;")
+       .replace(/</g, "&lt;")
+       .replace(/>/g, "&gt;")
+       .replace(/"/g, "&quot;")
+       .replace(/'/g, "&#039;");
+ }
+
+// NEW ROUTE HANDLER FOR DYNAMIC MACRO RENDERING
+app.get('/render-github-macro', (req, res) => {
+  // Extract parameters passed by Confluence from the query string
+  const githubUrl = req.query.url; 
+  const lineRange = req.query.lines || ''; 
+  const theme = req.query.theme || 'github-light'; 
+
+  // Check User-Agent for Scroll Viewport indicator (adjust pattern if needed)
+  const userAgent = req.headers['user-agent'] || '';
+  const isScrollViewport = userAgent.includes('ScrollExporter'); // Simple check
+
+  if (isScrollViewport) {
+    // Output a placeholder structure for Scroll Viewport exports
+    console.log(`Scroll Viewport detected. Rendering placeholder for: ${githubUrl}`); // Add logging
+    const placeholderHtml = `
+      <div class="gh-code-placeholder-wrapper" 
+           data-url="${escapeAttr(githubUrl)}" 
+           data-lines="${escapeAttr(lineRange)}" 
+           data-theme="${escapeAttr(theme)}">
+        <pre><code>Loading code from ${escapeHtml(githubUrl)}...</code></pre>
+      </div>`; 
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(placeholderHtml);
+
+  } else {
+    // For standard Confluence view, redirect to the existing iframe/HTML view
+    console.log(`Standard Confluence view. Redirecting for: ${githubUrl}`); // Add logging
+    const redirectUrl = `/macro-view.html?url=${encodeURIComponent(githubUrl)}&lines=${encodeURIComponent(lineRange)}&theme=${encodeURIComponent(theme)}`;
+    res.redirect(redirectUrl);
+  }
+});
+
 // Start the server
 const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
