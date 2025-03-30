@@ -1,8 +1,8 @@
 {
-    "key": "apryse-gh-live-renderer",
-    "name": "Apryse GitHub Code Live Renderer",
-    "description": "Live fetch and render GitHub code snippets for embedding in Confluence",
-    "version": "1.1.3",
+    "key": "com.apryse.github-code-renderer",
+    "name": "GitHub Code Renderer",
+    "description": "Renders code snippets from GitHub with syntax highlighting for Scroll Viewport",
+    "version": "1.1.4",
     "baseUrl": "https://dev.tandav.com",
     "vendor": {
         "name": "Apryse",

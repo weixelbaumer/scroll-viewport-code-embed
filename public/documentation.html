@@ -107,7 +107,7 @@
         <h1>GitHub Code Renderer Documentation</h1>
         
         <div class="note">
-            <strong>Version:</strong> 1.1.3 - This Confluence app allows you to embed and render code snippets directly from GitHub repositories.
+            <strong>Version:</strong> 1.1.4 - This Confluence app allows you to embed and render code snippets directly from GitHub repositories.
         </div>
         
         <h2 id="getting-started">Getting Started</h2>
@@ -159,7 +159,7 @@
         </ol>
         
         <pre><code class="language-javascript">// GitHub Code Renderer for Scroll Viewport
-// Version 1.1.3
+// Version 1.1.4
 
 // Only run on live sites, not in previews
 if (!vp.preview.isPagePreview() && !vp.preview.isSitePreview()) {
@@ -179,7 +179,7 @@ if (!vp.preview.isPagePreview() && !vp.preview.isSitePreview()) {
 
 function processGitHubCodeMarkers() {
   // Find all article content areas
-  const contentAreas = document.querySelectorAll('.article-content, .confluence-content');
+  const contentAreas = document.querySelectorAll('.article-content, .confluence-content, .vp-article__content');
   
   contentAreas.forEach(content => {
     // Look for our markers using regex

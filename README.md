@@ -23,8 +23,7 @@ This app provides two key components:
 ### Prerequisites
 
 - Node.js 14+ and npm
-- Cloudflare Account and `cloudflared` CLI tool installed and logged in (`cloudflared login`)
-- A registered domain managed by Cloudflare (in this case, `tandav.com`)
+- Cloudflare Account and `cloudflared` CLI tool installed and logged in
 
 ### Development Setup
 
@@ -33,13 +32,11 @@ This app provides two key components:
    ```bash
    cloudflared tunnel create github-fetcher-dev
    ```
-   *(Note the Tunnel ID and the path to the `.json` credentials file)*
 
-   Create Config File (`~/.cloudflared/config.yml`):
-   Ensure the `credentials-file` path uses the *full absolute path*.
+   Create Config File:
    ```yaml
    tunnel: github-fetcher-dev
-   credentials-file: /Users/<your_user>/.cloudflared/<TUNNEL_ID>.json
+   credentials-file: /PATH/TO/YOUR/.cloudflared/<TUNNEL_ID>.json
    ingress:
      - hostname: dev.tandav.com
        service: http://localhost:3000
@@ -51,31 +48,15 @@ This app provides two key components:
    cloudflared tunnel route dns github-fetcher-dev dev.tandav.com
    ```
 
-   Update `atlassian-connect.json`:
-   Ensure the `baseUrl` in `atlassian-connect.json` matches your tunnel hostname:
-   ```json
-   {
-       "baseUrl": "https://dev.tandav.com",
-   }
-   ```
-
 2. **Run the Application**
 
-   Install Dependencies:
    ```bash
    npm install
-   ```
-
-   Start the Server:
-   ```bash
    npm start
-   ```
-
-   Start the Tunnel:
-   ```bash
+   
+   # In a separate terminal
    cloudflared tunnel --config ~/.cloudflared/config.yml run github-fetcher-dev
    ```
-   *(Your app should now be accessible at `https://dev.tandav.com`)*
 
 ## Installing the Confluence App
 
@@ -86,11 +67,10 @@ This app provides two key components:
    ```
    https://dev.tandav.com/atlassian-connect.json
    ```
-5. Follow the prompts to complete installation
 
-## Configure Scroll Viewport Theme (Required for Viewport Rendering)
+## Configure Scroll Viewport Theme
 
-To enable GitHub code blocks in Scroll Viewport, you need to add custom JavaScript to your Scroll Viewport theme:
+To enable GitHub code blocks in Scroll Viewport, add custom JavaScript to your Scroll Viewport theme:
 
 1. In your Scroll Viewport site, click **Edit Theme** from the site overview
 2. Go to the **Templates** menu
@@ -99,7 +79,7 @@ To enable GitHub code blocks in Scroll Viewport, you need to add custom JavaScri
 
 ```javascript
 // GitHub Code Renderer for Scroll Viewport
-// Version 1.1.3
+// Version 1.1.4
 
 // Only run on live sites, not in previews
 if (!vp.preview.isPagePreview() && !vp.preview.isSitePreview()) {
@@ -119,7 +99,7 @@ if (!vp.preview.isPagePreview() && !vp.preview.isSitePreview()) {
 
 function processGitHubCodeMarkers() {
   // Find all article content areas
-  const contentAreas = document.querySelectorAll('.article-content, .confluence-content');
+  const contentAreas = document.querySelectorAll('.article-content, .confluence-content, .vp-article__content');
   
   contentAreas.forEach(content => {
     // Look for our markers using regex
@@ -206,29 +186,18 @@ function fetchGitHubCode(url, lines, theme, containerId) {
 }
 ```
 
-5. Click **Save** to apply the changes
-
 ## Usage
 
 ### Adding a GitHub Code Block to a Confluence Page
 
 1. Edit your Confluence page
 2. Click the '+' icon to add a macro
-3. Search for and select "GitHub Code Block"
-4. In the macro editor:
-   - Enter the full GitHub URL to the file you want to display
-   - Optionally, specify a line range (e.g., "5-15" or "10" for a single line)
-   - Select a syntax highlighting theme
-5. Click "Insert" to add the macro to the page
-6. Save your Confluence page
+3. Search for and select "GitHub Code"
+4. Enter the GitHub URL, optional line range, and select a theme
+5. Click "Insert" to add the macro
 
-### Scroll Viewport Integration
+### Supported GitHub URLs
 
-When your content is viewed through Scroll Viewport, the code block will be automatically rendered with syntax highlighting. The macro outputs a special marker that the custom JavaScript in your Scroll Viewport theme will process to display beautifully formatted code.
-
-## Supported GitHub URLs
-
-You can use any of these URL formats:
 - Regular GitHub file URLs: `https://github.com/owner/repo/blob/branch/path/to/file.js`
 - Raw GitHub content URLs: `https://raw.githubusercontent.com/owner/repo/branch/path/to/file.js`
 
