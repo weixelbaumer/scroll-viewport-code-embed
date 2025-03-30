@@ -146,6 +146,129 @@
             </tr>
         </table>
         
+        <h2 id="scroll-viewport-integration">Scroll Viewport Integration</h2>
+        
+        <p>To enable GitHub code blocks in your Scroll Viewport site, you need to add custom JavaScript to your Scroll Viewport theme:</p>
+        
+        <ol>
+            <li>In your Scroll Viewport site, click <strong>Edit Theme</strong> from the site overview</li>
+            <li>Go to the <strong>Templates</strong> menu</li>
+            <li>In the <strong>Additional</strong> section, expand the JS editor</li>
+            <li>Copy and paste the JavaScript code below</li>
+            <li>Click <strong>Save</strong> to apply the changes</li>
+        </ol>
+        
+        <pre><code class="language-javascript">// GitHub Code Renderer for Scroll Viewport
+// Version 1.1.3
+
+// Only run on live sites, not in previews
+if (!vp.preview.isPagePreview() && !vp.preview.isSitePreview()) {
+  // Load highlight.js for syntax highlighting
+  vp.loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js')
+    .then(() => {
+      // Load the theme CSS (default to github-light)
+      const linkEl = document.createElement('link');
+      linkEl.rel = 'stylesheet';
+      linkEl.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css';
+      document.head.appendChild(linkEl);
+      
+      // Process GitHub code markers in the article content
+      processGitHubCodeMarkers();
+    });
+}
+
+function processGitHubCodeMarkers() {
+  // Find all article content areas
+  const contentAreas = document.querySelectorAll('.article-content, .confluence-content');
+  
+  contentAreas.forEach(content => {
+    // Look for our markers using regex
+    const markerRegex = /##GITHUB:([^|]+)\|([^|]*)\|([^#]*)##/g;
+    const html = content.innerHTML;
+    
+    // Replace markers with actual code blocks
+    content.innerHTML = html.replace(markerRegex, (match, url, lines, theme) => {
+      // Create a placeholder while loading
+      const id = 'gh-code-' + Math.random().toString(36).substring(2, 10);
+      fetchGitHubCode(url, lines, theme, id);
+      return `&lt;div id="${id}" class="github-code-block"&gt;
+                &lt;div class="loading-indicator"&gt;Loading code from GitHub...&lt;/div&gt;
+              &lt;/div&gt;`;
+    });
+  });
+}
+
+function fetchGitHubCode(url, lines, theme, containerId) {
+  // Convert github.com URL to raw URL if needed
+  let rawUrl = url;
+  if (url.includes('github.com') && !url.includes('raw.githubusercontent.com')) {
+    rawUrl = url.replace('github.com', 'raw.githubusercontent.com')
+               .replace('/blob/', '/');
+  }
+  
+  // Fetch the code
+  fetch(rawUrl)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+      }
+      return response.text();
+    })
+    .then(code => {
+      // Process line range if specified
+      let processedCode = code;
+      if (lines && lines.trim()) {
+        const lineRange = lines.trim();
+        const lineArray = code.split('\n');
+        
+        if (lineRange.includes('-')) {
+          // Range of lines
+          const [start, end] = lineRange.split('-').map(num => parseInt(num, 10));
+          processedCode = lineArray.slice(start - 1, end).join('\n');
+        } else {
+          // Single line
+          const lineNum = parseInt(lineRange, 10);
+          processedCode = lineArray[lineNum - 1];
+        }
+      }
+      
+      // Render the code with highlight.js
+      const container = document.getElementById(containerId);
+      if (container) {
+        // Determine language from file extension
+        const fileExt = url.split('.').pop().toLowerCase();
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        
+        // Apply appropriate language class if determinable
+        if (fileExt) {
+          code.className = `language-${fileExt}`;
+        }
+        
+        code.textContent = processedCode;
+        pre.appendChild(code);
+        container.innerHTML = '';
+        container.appendChild(pre);
+        
+        // Apply highlighting
+        if (window.hljs) {
+          window.hljs.highlightElement(code);
+        }
+      }
+    })
+    .catch(error => {
+      // Show error in the container
+      const container = document.getElementById(containerId);
+      if (container) {
+        container.innerHTML = `&lt;div class="error-message"&gt;Error loading code: ${error.message}&lt;/div&gt;`;
+      }
+    });
+}</code></pre>
+
+        <div class="note">
+            <p><strong>Note:</strong> This approach follows the official K15t Scroll Viewport documentation for <a href="https://help.k15t.com/scroll-viewport/inject-custom-javascript" target="_blank">injecting custom JavaScript</a>.</p>
+        </div>
+        
         <h2 id="features">Features</h2>
         <ul>
             <li><strong>Live Code Rendering:</strong> The code is fetched directly from GitHub each time the page is viewed, ensuring it's always up to date</li>
@@ -189,6 +312,17 @@
                 <li>Edit the macro and save it again without making changes</li>
                 <li>Clear your browser cache and reload the page</li>
                 <li>If you recently updated the app, try uninstalling and reinstalling it</li>
+            </ol>
+        </div>
+        
+        <h3 id="scroll-viewport-issues">Scroll Viewport Issues</h3>
+        <div class="warning">
+            <p>If code blocks aren't rendering in Scroll Viewport:</p>
+            <ol>
+                <li>Verify you've added the custom JavaScript to your theme as shown in the <a href="#scroll-viewport-integration">Scroll Viewport Integration</a> section</li>
+                <li>Check your browser console for any JavaScript errors</li>
+                <li>Try adding <code>?disable-custom-overrides=true</code> to your URL and then remove it to refresh the custom JS</li>
+                <li>Make sure the macro is creating the correct marker format in Confluence</li>
             </ol>
         </div>
         

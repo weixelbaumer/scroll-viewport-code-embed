@@ -90,13 +90,123 @@ This app provides two key components:
 
 ## Configure Scroll Viewport Theme (Required for Viewport Rendering)
 
-1. Go to Confluence Admin -> Scroll Viewport -> Your Theme -> Theme Settings.
-2. Find the "Custom JavaScript" section.
-3. Add the following script tag:
-   ```html
-   <script src="https://dev.tandav.com/theme-script.js" defer></script>
-   ```
-4. Save the theme settings.
+To enable GitHub code blocks in Scroll Viewport, you need to add custom JavaScript to your Scroll Viewport theme:
+
+1. In your Scroll Viewport site, click **Edit Theme** from the site overview
+2. Go to the **Templates** menu
+3. In the **Additional** section, expand the JS editor
+4. Copy and paste the following JavaScript code:
+
+```javascript
+// GitHub Code Renderer for Scroll Viewport
+// Version 1.1.3
+
+// Only run on live sites, not in previews
+if (!vp.preview.isPagePreview() && !vp.preview.isSitePreview()) {
+  // Load highlight.js for syntax highlighting
+  vp.loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js')
+    .then(() => {
+      // Load the theme CSS (default to github-light)
+      const linkEl = document.createElement('link');
+      linkEl.rel = 'stylesheet';
+      linkEl.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css';
+      document.head.appendChild(linkEl);
+      
+      // Process GitHub code markers in the article content
+      processGitHubCodeMarkers();
+    });
+}
+
+function processGitHubCodeMarkers() {
+  // Find all article content areas
+  const contentAreas = document.querySelectorAll('.article-content, .confluence-content');
+  
+  contentAreas.forEach(content => {
+    // Look for our markers using regex
+    const markerRegex = /##GITHUB:([^|]+)\|([^|]*)\|([^#]*)##/g;
+    const html = content.innerHTML;
+    
+    // Replace markers with actual code blocks
+    content.innerHTML = html.replace(markerRegex, (match, url, lines, theme) => {
+      // Create a placeholder while loading
+      const id = 'gh-code-' + Math.random().toString(36).substring(2, 10);
+      fetchGitHubCode(url, lines, theme, id);
+      return `<div id="${id}" class="github-code-block">
+                <div class="loading-indicator">Loading code from GitHub...</div>
+              </div>`;
+    });
+  });
+}
+
+function fetchGitHubCode(url, lines, theme, containerId) {
+  // Convert github.com URL to raw URL if needed
+  let rawUrl = url;
+  if (url.includes('github.com') && !url.includes('raw.githubusercontent.com')) {
+    rawUrl = url.replace('github.com', 'raw.githubusercontent.com')
+               .replace('/blob/', '/');
+  }
+  
+  // Fetch the code
+  fetch(rawUrl)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+      }
+      return response.text();
+    })
+    .then(code => {
+      // Process line range if specified
+      let processedCode = code;
+      if (lines && lines.trim()) {
+        const lineRange = lines.trim();
+        const lineArray = code.split('\n');
+        
+        if (lineRange.includes('-')) {
+          // Range of lines
+          const [start, end] = lineRange.split('-').map(num => parseInt(num, 10));
+          processedCode = lineArray.slice(start - 1, end).join('\n');
+        } else {
+          // Single line
+          const lineNum = parseInt(lineRange, 10);
+          processedCode = lineArray[lineNum - 1];
+        }
+      }
+      
+      // Render the code with highlight.js
+      const container = document.getElementById(containerId);
+      if (container) {
+        // Determine language from file extension
+        const fileExt = url.split('.').pop().toLowerCase();
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        
+        // Apply appropriate language class if determinable
+        if (fileExt) {
+          code.className = `language-${fileExt}`;
+        }
+        
+        code.textContent = processedCode;
+        pre.appendChild(code);
+        container.innerHTML = '';
+        container.appendChild(pre);
+        
+        // Apply highlighting
+        if (window.hljs) {
+          window.hljs.highlightElement(code);
+        }
+      }
+    })
+    .catch(error => {
+      // Show error in the container
+      const container = document.getElementById(containerId);
+      if (container) {
+        container.innerHTML = `<div class="error-message">Error loading code: ${error.message}</div>`;
+      }
+    });
+}
+```
+
+5. Click **Save** to apply the changes
 
 ## Usage
 
@@ -114,7 +224,7 @@ This app provides two key components:
 
 ### Scroll Viewport Integration
 
-When your content is viewed through Scroll Viewport, the code block will be automatically rendered with syntax highlighting. The macro outputs a special marker that Scroll Viewport's theme script processes to display beautifully formatted code.
+When your content is viewed through Scroll Viewport, the code block will be automatically rendered with syntax highlighting. The macro outputs a special marker that the custom JavaScript in your Scroll Viewport theme will process to display beautifully formatted code.
 
 ## Supported GitHub URLs
 
@@ -124,7 +234,7 @@ You can use any of these URL formats:
 
 ## License
 
-Copyright © 2024 Apryse. All rights reserved.
+Copyright © 2025 Apryse. All rights reserved.
 
 ## Support
 
