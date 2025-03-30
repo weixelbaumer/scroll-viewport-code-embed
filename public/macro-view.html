@@ -95,46 +95,46 @@
                             throw new Error("No macro data received from Confluence");
                         }
                         
-                        // Check if we have the marker directly (from editor)
-                        if (data.marker) {
-                            log("Found marker in macro data: " + data.marker);
-                            outputEl.textContent = data.marker;
-                            outputEl.className = '';
-                            AP.sizeToParent();
-                            return;
+                        // Get URL, lines, and theme from the parameters or directly
+                        let url = '';
+                        let lines = '';
+                        let theme = 'github-light';
+                        
+                        // Check for parameters structure first (new format)
+                        if (data.parameters) {
+                            log("Found parameters structure in macro data");
+                            url = data.parameters.url ? data.parameters.url.value : '';
+                            lines = data.parameters.lines ? data.parameters.lines.value : '';
+                            theme = data.parameters.theme ? data.parameters.theme.value : 'github-light';
+                        } 
+                        // If no parameters, check direct properties (old format)
+                        else if (data.url) {
+                            log("Using direct properties from macro data");
+                            url = data.url.trim();
+                            lines = (data.lines || '').trim();
+                            theme = data.theme || 'github-light';
                         }
                         
-                        // Alternative: Try to reconstruct the marker from individual fields
-                        if (data.url) {
-                            const url = data.url.trim();
-                            const lines = (data.lines || '').trim();
-                            const theme = data.theme || 'github-light';
-                            
-                            log(`Reconstructing marker from fields - URL: ${url}, Lines: ${lines}, Theme: ${theme}`);
-                            
-                            if (!url) {
-                                throw new Error("GitHub URL is missing or empty");
-                            }
-                            
-                            // Use pipe delimiter which is more reliable than colons (URLs contain colons)
-                            // Keep the marker format as simple as possible
-                            const marker = `##GITHUB:${url}|${lines}|${theme}##`;
-                            
-                            // Update container to ensure proper display and scaling
-                            outputEl.textContent = marker;
-                            outputEl.className = '';
-                            log("Generated marker: " + marker);
-                            
-                            // Make sure the container adjusts to content
-                            outputEl.style.wordBreak = 'break-all';
-                            outputEl.style.overflowWrap = 'break-word';
-                            AP.sizeToParent();
-                            return;
+                        log(`Using URL: ${url}, Lines: ${lines}, Theme: ${theme}`);
+                        
+                        if (!url) {
+                            throw new Error("GitHub URL is missing or empty");
                         }
                         
-                        // If we get here, we don't have any valid data
-                        throw new Error("No GitHub URL found. Please edit the macro and add a GitHub URL.");
+                        // Use pipe delimiter which is more reliable than colons (URLs contain colons)
+                        // Keep the marker format as simple as possible
+                        const marker = `##GITHUB:${url}|${lines}|${theme}##`;
                         
+                        // Update container to ensure proper display and scaling
+                        outputEl.textContent = marker;
+                        outputEl.className = '';
+                        log("Generated marker: " + marker);
+                        
+                        // Make sure the container adjusts to content
+                        outputEl.style.wordBreak = 'break-all';
+                        outputEl.style.overflowWrap = 'break-word';
+                        AP.sizeToParent();
+                        return;
                     } catch (error) {
                         showError(error.message);
                     }

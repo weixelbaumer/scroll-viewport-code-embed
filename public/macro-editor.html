@@ -182,9 +182,16 @@
                     
                     // Fill fields with existing data if available
                     if (data) {
-                        document.getElementById('url').value = data.url || '';
-                        document.getElementById('lines').value = data.lines || '';
-                        document.getElementById('theme').value = data.theme || 'github-light';
+                        // Handle both parameter structure and direct properties
+                        if (data.parameters && data.parameters.url) {
+                            document.getElementById('url').value = data.parameters.url.value || '';
+                            document.getElementById('lines').value = data.parameters.lines ? data.parameters.lines.value : '';
+                            document.getElementById('theme').value = data.parameters.theme ? data.parameters.theme.value : 'github-light';
+                        } else {
+                            document.getElementById('url').value = data.url || '';
+                            document.getElementById('lines').value = data.lines || '';
+                            document.getElementById('theme').value = data.theme || 'github-light';
+                        }
                     }
                 });
 
@@ -250,15 +257,25 @@
                     return;
                 }
                 
-                // Simplify the URL if it's too long
-                const displayUrl = url.length > 100 ? url.substring(0, 97) + '...' : url;
-                
-                // Construct macroData to store it with the macro instance
-                // Use a clean structure with just the necessary parameters
+                // Construct macroData using the parameters structure that Confluence expects
                 const macroData = {
-                    url: url,
-                    lines: lines,
-                    theme: theme
+                    parameters: {
+                        url: {
+                            value: url
+                        }
+                    }
+                };
+
+                // Only add lines if provided (optional parameter)
+                if (lines) {
+                    macroData.parameters.lines = {
+                        value: lines
+                    };
+                }
+
+                // Add theme (even if it's the default)
+                macroData.parameters.theme = {
+                    value: theme
                 };
                 
                 log(`Saving macro data: ${JSON.stringify(macroData)}`);
