@@ -167,11 +167,27 @@
     // 1. Initial scan and wrapping of markers
     function initialScan() {
          console.log("GitHub Theme Script: Performing initial scan...");
-         try {
-             processNode(document.body);
-         } catch(e) {
-             console.error("GitHub Theme Script: Error during initial scan:", e);
+         // *** MODIFICATION START ***
+         // Find the main content area element specific to your theme
+         const contentArea = document.querySelector('.vp-article__content'); // <-- ADJUST SELECTOR if your theme uses a different class
+         if (contentArea) {
+             try {
+                 processNode(contentArea); // Scan only within the content area
+                 console.log("GitHub Theme Script: Scanned main content area successfully");
+             } catch(e) {
+                 console.error("GitHub Theme Script: Error during initial scan within content area:", e);
+             }
+         } else {
+              console.warn("GitHub Theme Script: Could not find main content area with selector '.vp-article__content'. Falling back to body scan.");
+              // Fallback to scanning the whole body if specific container not found
+              try {
+                  processNode(document.body);
+              } catch(e) {
+                  console.error("GitHub Theme Script: Error during fallback body scan:", e);
+              }
          }
+         // *** MODIFICATION END ***
+
          // 2. Fetch and replace the wrapped markers
          fetchAndReplaceMarkers();
      }

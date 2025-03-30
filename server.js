@@ -2897,3 +2897,137 @@ app.use(express.static('public', {
     }
   }
 }));
+
+// *** ADD THE ACTUAL ROUTE HANDLER FOR THE MACRO RENDER URL ***
+app.get('/atlassian-connect/macro/render-bypass', (req, res) => {
+
+  // --- STEP 1: Detect Scroll Viewport Export ---
+  // Check request headers (e.g., 'x-scroll-viewport-export', 'User-Agent')
+  // or query parameters (e.g., 'renderingContext=scroll-viewport').
+  // Using User-Agent as a basic detection method - ADJUST AS NEEDED.
+  const isViewportExport = req.headers['user-agent']?.toLowerCase().includes('scrollviewport');
+  console.log(`Request User-Agent: ${req.headers['user-agent']}, isViewportExport: ${isViewportExport}`);
+
+  // --- STEP 2: Get Macro Parameters ---
+  // Adapt parameter extraction based on your middleware (JWT/Context).
+  // Atlassian Connect often puts context in req.context or res.locals.context.
+  // Using req.query as a fallback. You MUST ensure parameters are available here.
+  let url, lines, theme;
+  try {
+    // --- TRY ACCESSING VIA COMMON ATALASSIAN CONNECT CONTEXT ---
+    // Adjust these lines based on where your ACE middleware (if any) stores the context
+    // It might be req.context, res.locals.context, or passed differently (e.g. decoded JWT).
+    const contextParameters = req.context?.context?.macro?.parameters || res.locals?.context?.macro?.parameters;
+
+    // Fallback to query parameters if context is not found
+    const macroParams = contextParameters || req.query;
+
+    console.log("Attempting to extract params from:", macroParams); // Debug log
+
+    url = macroParams.url;
+    lines = macroParams.lines || ''; // Default to empty string if not present
+    theme = macroParams.theme || DEFAULT_THEME || 'github'; // Use environment default or 'github'
+
+    // Backward compatibility logic (as seen in macro-render.html)
+    if (!url && macroParams.repository && macroParams.path) {
+         const branch = macroParams.branch || 'main';
+         url = `https://github.com/${macroParams.repository}/blob/${branch}/${macroParams.path}`;
+         console.log(`Constructed URL from deprecated params: ${url}`);
+    }
+    // --- END OF PARAMETER EXTRACTION ---
+
+    if (!url) {
+       // If URL is still missing, log the source for debugging
+       console.error("Failed URL extraction. Context:", contextParameters, "Query:", req.query);
+       throw new Error('GitHub URL parameter is missing from macro context/query.');
+    }
+
+    console.log(`Extracted Parameters - URL: ${url}, Lines: ${lines}, Theme: ${theme}`);
+
+  } catch (error) {
+     console.error("Error extracting macro parameters:", error);
+     // Respond with an error, potentially rendering an error view or text
+     // Avoid sending detailed error messages to the client in production
+     return res.status(400).send('Error processing macro parameters. Please check configuration.');
+  }
+
+
+  // --- STEP 3: Conditional Rendering ---
+  if (isViewportExport) {
+    // **Output Plain Text Marker for Scroll Viewport**
+    console.log(`Rendering GitHub marker for Scroll Viewport export: ${url}`);
+
+    // Construct the marker string using the pipe format expected by theme-script.js
+    // Format: ##GITHUB:url|lines|theme##
+    const marker = `##GITHUB:${url}|${lines}|${theme}##`;
+
+    // Send the marker wrapped in a simple, non-intrusive HTML tag
+    // Using a div with a data attribute is generally safe.
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    // Ensure no caching for this potentially dynamic response
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    res.status(200).send(`<div data-macro-marker="github-code-renderer" style="display:none;">${marker}</div>`); // Hide the div visually
+
+  } else {
+    // **Render Standard Iframe View for Confluence**
+    console.log(`Rendering standard iframe view for Confluence: ${url}`);
+    // Serve the HTML file that contains the client-side Atlassian Connect logic
+    // This file uses AP.confluence.getMacroData() to fetch params client-side.
+    const renderHtmlPath = path.join(__dirname, 'atlassian-connect', 'macro-render.html'); // Verify this path
+     try {
+         // Set appropriate headers for the iframe content
+         res.setHeader('Content-Type', 'text/html; charset=utf-8');
+         res.sendFile(renderHtmlPath, (err) => {
+             if (err) {
+                 console.error(`Error sending file ${renderHtmlPath}:`, err);
+                 // Avoid sending detailed error messages to the client in production
+                 if (!res.headersSent) {
+                    res.status(500).send('Error loading macro view.');
+                 }
+             }
+         });
+     } catch (err) {
+         console.error(`Error preparing to send file ${renderHtmlPath}:`, err);
+         // Avoid sending detailed error messages to the client in production
+         if (!res.headersSent) {
+            res.status(500).send('Error loading macro view.');
+         }
+     }
+  }
+});
+
+// Add routes for the editor bypass
+// This likely just needs to serve the static HTML file
+app.get('/atlassian-connect/macro/editor-bypass', (req, res) => {
+    console.log(`Serving macro editor: atlassian-connect/macro-editor.html`);
+    const editorHtmlPath = path.join(__dirname, 'atlassian-connect', 'macro-editor.html'); // Verify this path
+    try {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.sendFile(editorHtmlPath, (err) => {
+            if (err) {
+                console.error(`Error sending file ${editorHtmlPath}:`, err);
+                if (!res.headersSent) {
+                    res.status(500).send('Error loading macro editor.');
+                }
+            }
+        });
+    } catch (err) {
+        console.error(`Error preparing to send file ${editorHtmlPath}:`, err);
+        if (!res.headersSent) {
+            res.status(500).send('Error loading macro editor.');
+        }
+    }
+});
+
+
+// Existing routes (like /html, /, etc.) and server start below...
+// Start the server
+app.listen(PORT, () => {
+  console.log(`GitHub Code Renderer server running on port ${PORT}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`Atlassian Connect Base URL should be set to: ${process.env.AC_LOCAL_BASE_URL || 'YOUR_TUNNEL_URL'}`);
+  }
+});
