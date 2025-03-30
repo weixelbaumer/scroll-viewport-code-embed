@@ -23,35 +23,6 @@
         "list_project_files"
       ]
     },
-    "jdoodle-integration-server": {
-      "command": "node",
-      "args": ["src/jdoodle-integration/server.js"],
-      "env": {
-        "PORT": "3000",
-        "GITHUB_TOKEN": "",
-        "JDOODLE_CLIENT_ID": "",
-        "JDOODLE_CLIENT_SECRET": "",
-        "CACHE_DURATION": "3600000"
-      },
-      "disabled": true,
-      "autoApprove": []
-    },
-    "code-renderer": {
-      "command": "node",
-      "args": ["src/server-side-renderer/server.js"],
-      "env": {
-        "PORT": "3001"
-      },
-      "disabled": true,
-      "autoApprove": []
-    },
-    "markdown-tool": {
-      "command": "node",
-      "args": ["src/markdown-solution/github-to-markdown.js"],
-      "env": {},
-      "disabled": true,
-      "autoApprove": []
-    },
     "github-code-renderer": {
       "command": "node",
       "args": ["scroll-viewport-code-embed/server.js"],
