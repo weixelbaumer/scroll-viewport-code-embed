@@ -1160,26 +1160,6 @@ app.get('/raw', async (req, res) => {
   }
 });
 
-// Helper functions for escaping HTML (add if not already present in server.js)
-function escapeAttr(str) {
-  // Basic escaping for HTML attributes
-  return (str || '').toString()
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-function escapeHtml(str) {
-  // Basic escaping for HTML content
-   return (str || '').toString()
-       .replace(/&/g, "&amp;")
-       .replace(/</g, "&lt;")
-       .replace(/>/g, "&gt;")
-       .replace(/"/g, "&quot;")
-       .replace(/'/g, "&#039;");
- }
-
 // ROUTE HANDLER FOR DYNAMIC MACRO RENDERING
 app.get('/render-github-macro', (req, res) => {
   // Extract parameters
@@ -1187,36 +1167,48 @@ app.get('/render-github-macro', (req, res) => {
   const lineRange = req.query.lines || ''; 
   const theme = req.query.theme || 'github-light'; 
 
-  // Check User-Agent 
+  // Check User-Agent with detailed logging
   const userAgent = req.headers['user-agent'] || '';
   const isScrollViewport = userAgent.includes('ScrollExporter');
+  
+  console.log('=== GitHub Macro Render Request ===');
+  console.log('User-Agent:', userAgent);
+  console.log('Is Scroll Viewport:', isScrollViewport);
+  console.log('GitHub URL:', githubUrl);
+  console.log('Line Range:', lineRange);
+  console.log('Theme:', theme);
 
   if (isScrollViewport) {
-    // Output a hidden anchor tag containing data attributes
-    console.log(`Scroll Viewport detected. Rendering hidden anchor placeholder for: ${githubUrl}`); 
-
-    // Add specific class and data attributes
-    // Use a dummy href, make it hidden. Content is needed.
-    const placeholderHtml = `
-      <a class="gh-code-anchor-placeholder" 
-         href="#gh-placeholder-${Date.now()}" 
-         data-url="${escapeAttr(githubUrl)}" 
-         data-lines="${escapeAttr(lineRange)}" 
-         data-theme="${escapeAttr(theme)}" 
-         style="display:none; visibility:hidden;">
-           GitHub Data Marker
-      </a>`; 
-
+    console.log('Using text marker approach for Scroll Viewport');
+    
+    // Use plain text marker format which might survive filtering
+    // Format: ##GITHUB:url|lines|theme##
+    const marker = `##GITHUB:${githubUrl}|${lineRange}|${theme}##`;
+    
+    // Wrap in a paragraph to make it more likely to survive as standalone text
+    const placeholderText = `<p>${marker}</p>`;
+    
+    console.log('Generated marker:', marker);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(placeholderHtml);
-
+    res.send(placeholderText);
   } else {
     // Standard Confluence view: redirect to /macro-view.html
-    console.log(`Standard Confluence view. Redirecting for: ${githubUrl}`); 
+    console.log('Standard Confluence view detected, redirecting to macro-view.html');
     const redirectUrl = `/macro-view.html?url=${encodeURIComponent(githubUrl)}&lines=${encodeURIComponent(lineRange)}&theme=${encodeURIComponent(theme)}`;
     res.redirect(redirectUrl);
   }
 });
+
+// Helper function to escape HTML attributes
+function escapeAttr(str) {
+  return (str || '')
+    .toString()
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
 // Start the server
 const server = app.listen(PORT, () => {

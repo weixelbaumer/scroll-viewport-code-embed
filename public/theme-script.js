@@ -1,8 +1,11 @@
 /**
- * GitHub Code Renderer - Scroll Viewport Theme Script v2
+ * GitHub Code Renderer - Scroll Viewport Theme Script v2.1.0
  * Finds ##GITHUB:url:lines:theme## markers and replaces them with code blocks.
+ * Also processes anchor tags with class "gh-code-anchor-placeholder".
  */
 (function() {
+    console.log("GitHub Theme Script v2.1.0: Script loading");
+    
     // Determine the base URL for the API. Assumes this script is served from the same origin as the API.
     // If hosted elsewhere, this needs to be configured.
     const scriptOrigin = document.currentScript ? document.currentScript.src : window.location.origin;
@@ -17,6 +20,7 @@
     const MARKER_SUFFIX = '##';
     const MAX_DEPTH = 10; // Limit recursion depth for safety
 
+    // Function to process nodes and find text markers
     function processNode(node, depth = 0) {
         if (depth > MAX_DEPTH) {
             console.warn("GitHub Theme Script: Max recursion depth reached for node", node);
@@ -88,10 +92,11 @@
         }
     }
 
+    // Function to handle text marker spans
     function fetchAndReplaceMarkers() {
         console.log("GitHub Theme Script: Searching for marker spans...");
         const spans = document.querySelectorAll('span[data-github-marker="true"]');
-        console.log(`GitHub Theme Script: Found ${spans.length} markers to process.`);
+        console.log(`GitHub Theme Script: Found ${spans.length} spans to process.`);
 
         spans.forEach(span => {
             // Prevent reprocessing
@@ -154,6 +159,120 @@
         });
     }
 
+    // Function to process anchor placeholders
+    function fetchAndReplaceAnchorPlaceholders() {
+        console.log("GitHub Theme Script: Searching for anchor placeholders (class: gh-code-anchor-placeholder)...");
+        
+        // Dump all anchors for debugging
+        const allAnchors = document.querySelectorAll('a');
+        console.log(`GitHub Theme Script: DEBUG - Found ${allAnchors.length} total anchor elements on page`);
+        
+        if (allAnchors.length > 0 && allAnchors.length < 50) {
+            console.log("GitHub Theme Script: DEBUG - Listing all anchors:");
+            allAnchors.forEach((a, i) => {
+                console.log(`Anchor ${i}: class="${a.className}", id="${a.id}", href="${a.href}"`);
+            });
+        }
+        
+        // Now search for our specific placeholders
+        const anchors = document.querySelectorAll('a.gh-code-anchor-placeholder');
+        console.log(`GitHub Theme Script: Found ${anchors.length} anchor placeholders to process.`);
+
+        // Debug DOM structure if no anchors found
+        if (anchors.length === 0) {
+            console.log("GitHub Theme Script: DEBUG - Searching page source for gh-code-anchor-placeholder...");
+            const htmlContent = document.documentElement.outerHTML;
+            const hasAnchorInSource = htmlContent.includes('gh-code-anchor-placeholder');
+            console.log(`GitHub Theme Script: DEBUG - Anchor placeholder found in page source: ${hasAnchorInSource}`);
+            
+            // Try alternate selector approach (might have class name mangling)
+            const altAnchors = document.querySelectorAll('a[data-url]');
+            console.log(`GitHub Theme Script: DEBUG - Found ${altAnchors.length} anchors with data-url attribute`);
+            
+            if (altAnchors.length > 0) {
+                console.log("GitHub Theme Script: Using alternative anchors with data-url");
+                processAnchors(altAnchors);
+            }
+        } else {
+            processAnchors(anchors);
+        }
+    }
+    
+    // Helper function to process anchors
+    function processAnchors(anchors) {
+        anchors.forEach(anchor => {
+            // Prevent reprocessing
+            if (anchor.hasAttribute('data-github-processing')) return;
+            anchor.setAttribute('data-github-processing', 'true');
+
+            const url = anchor.getAttribute('data-url');
+            const lines = anchor.getAttribute('data-lines');
+            const theme = anchor.getAttribute('data-theme');
+            
+            console.log(`GitHub Theme Script: Processing anchor placeholder with ID ${anchor.id}`);
+            console.log(`- URL: ${url}`);
+            console.log(`- Lines: ${lines}`);
+            console.log(`- Theme: ${theme}`);
+
+            if (!url) {
+                console.error(`GitHub Theme Script: Anchor ${anchor.id} is missing URL.`);
+                return;
+            }
+
+            // Construct API URL (GET request to /html)
+            const apiUrl = new URL(apiBaseUrl + "/html");
+            apiUrl.searchParams.append('url', url);
+            if (lines) {
+                apiUrl.searchParams.append('lines', lines);
+            }
+            apiUrl.searchParams.append('theme', theme);
+
+            console.log("GitHub Theme Script: Fetching", apiUrl.toString());
+
+            fetch(apiUrl.toString())
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { 
+                            throw new Error(`HTTP ${response.status}: ${text || response.statusText}`); 
+                        });
+                    }
+                    return response.text(); // Expecting raw HTML
+                })
+                .then(html => {
+                    // Replace the anchor with the fetched HTML
+                    const container = document.createElement('div');
+                    // Mark container to prevent reprocessing inner content
+                    container.setAttribute('data-github-fetched', 'true');
+                    container.innerHTML = html;
+                    
+                    // Insert the container after the anchor
+                    if (anchor.parentNode) {
+                        anchor.parentNode.insertBefore(container, anchor.nextSibling);
+                        // Keep the anchor but make it invisible
+                        anchor.style.display = 'none';
+                        anchor.style.visibility = 'hidden';
+                    } else {
+                        console.warn(`GitHub Theme Script: Anchor ${anchor.id} has no parent during replacement.`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`GitHub Theme Script: Error fetching code for anchor ${anchor.id}:`, error);
+                    // Add error indicator near the anchor
+                    const errorNode = document.createElement('div');
+                    errorNode.style.color = 'red';
+                    errorNode.style.border = '1px solid red';
+                    errorNode.style.padding = '5px';
+                    errorNode.style.margin = '5px 0';
+                    errorNode.style.backgroundColor = '#fee';
+                    errorNode.textContent = `[GitHub Code Error: ${error.message}]`;
+                    
+                    if (anchor.parentNode) {
+                        anchor.parentNode.insertBefore(errorNode, anchor.nextSibling);
+                    }
+                });
+        });
+    }
+
     function showError(spanElement, message) {
         spanElement.textContent = `[GitHub Code Error: ${message}]`;
         spanElement.style.color = 'red';
@@ -166,67 +285,111 @@
 
     // 1. Initial scan and wrapping of markers
     function initialScan() {
-         console.log("GitHub Theme Script: Performing initial scan...");
-         // *** MODIFICATION START ***
-         // Find the main content area element specific to your theme
-         const contentArea = document.querySelector('.vp-article__content'); // <-- ADJUST SELECTOR if your theme uses a different class
-         if (contentArea) {
-             try {
-                 processNode(contentArea); // Scan only within the content area
-                 console.log("GitHub Theme Script: Scanned main content area successfully");
-             } catch(e) {
-                 console.error("GitHub Theme Script: Error during initial scan within content area:", e);
-             }
-         } else {
-              console.warn("GitHub Theme Script: Could not find main content area with selector '.vp-article__content'. Falling back to body scan.");
-              // Fallback to scanning the whole body if specific container not found
-              try {
-                  processNode(document.body);
-              } catch(e) {
-                  console.error("GitHub Theme Script: Error during fallback body scan:", e);
-              }
-         }
-         // *** MODIFICATION END ***
+        console.log("GitHub Theme Script: Performing initial scan...");
+        
+        // Process text markers
+        const contentArea = document.querySelector('.vp-article__content'); // <-- ADJUST SELECTOR if your theme uses a different class
+        if (contentArea) {
+            try {
+                processNode(contentArea); // Scan only within the content area
+                console.log("GitHub Theme Script: Scanned main content area successfully");
+            } catch(e) {
+                console.error("GitHub Theme Script: Error during initial scan within content area:", e);
+            }
+        } else {
+            console.warn("GitHub Theme Script: Could not find main content area with selector '.vp-article__content'. Falling back to body scan.");
+            // Fallback to scanning the whole body if specific container not found
+            try {
+                processNode(document.body);
+            } catch(e) {
+                console.error("GitHub Theme Script: Error during fallback body scan:", e);
+            }
+        }
+         
+        // Process text markers
+        fetchAndReplaceMarkers();
+        
+        try {
+            // Process anchor placeholders (new code)
+            console.log("GitHub Theme Script: About to search for anchor placeholders...");
+            fetchAndReplaceAnchorPlaceholders();
+            console.log("GitHub Theme Script: Completed anchor placeholder search");
+        } catch (e) {
+            console.error("GitHub Theme Script: Error while processing anchor placeholders:", e);
+        }
+    }
 
-         // 2. Fetch and replace the wrapped markers
-         fetchAndReplaceMarkers();
-     }
-
+    // A separate function to ensure anchor processing happens
+    function ensureAnchorProcessing() {
+        console.log("GitHub Theme Script: Running standalone anchor processing...");
+        try {
+            fetchAndReplaceAnchorPlaceholders();
+        } catch (e) {
+            console.error("GitHub Theme Script: Error in standalone anchor processing:", e);
+        }
+    }
 
     // Run on DOMContentLoaded or immediately if already loaded
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initialScan);
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("GitHub Theme Script: DOMContentLoaded fired");
+            initialScan();
+            // Double check anchors after a slight delay
+            setTimeout(ensureAnchorProcessing, 500);
+        });
     } else {
+        console.log("GitHub Theme Script: Document already loaded, running initialScan immediately");
         initialScan();
+        // Double check anchors after a slight delay
+        setTimeout(ensureAnchorProcessing, 500);
     }
 
-    // Optional: Use MutationObserver to handle dynamically added content
-    // This adds complexity but makes it work if Confluence/Viewport loads content late
-    /*
+    // Use MutationObserver to handle dynamically added content
     const observer = new MutationObserver((mutationsList) => {
-        let needsProcessing = false;
+        let needsTextProcessing = false;
+        let anchorsAdded = false;
+        
         for (const mutation of mutationsList) {
             if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
                 mutation.addedNodes.forEach(newNode => {
-                    if (newNode.nodeType === Node.TEXT_NODE && newNode.nodeValue.includes(MARKER_PREFIX)) {
-                       needsProcessing = true;
-                       processNode(newNode.parentNode); // Process parent if text node added directly
-                    } else if (newNode.nodeType === Node.ELEMENT_NODE) {
-                        // Check if the new node *contains* markers
-                        if (newNode.textContent.includes(MARKER_PREFIX)) {
-                            needsProcessing = true;
-                            processNode(newNode);
+                    // Check for text nodes with markers
+                    if (newNode.nodeType === Node.TEXT_NODE && newNode.nodeValue && newNode.nodeValue.includes(MARKER_PREFIX)) {
+                        needsTextProcessing = true;
+                        if (newNode.parentNode) {
+                            processNode(newNode.parentNode);
+                        }
+                    } 
+                    // Check for added anchor placeholders
+                    else if (newNode.nodeType === Node.ELEMENT_NODE) {
+                        // Check if it's an anchor placeholder
+                        if (newNode.tagName === 'A' && newNode.classList.contains('gh-code-anchor-placeholder')) {
+                            anchorsAdded = true;
+                            console.log("GitHub Theme Script: MutationObserver detected new anchor placeholder");
+                        }
+                        // Or if it contains text markers or anchor placeholders
+                        else {
+                            if (newNode.textContent && newNode.textContent.includes(MARKER_PREFIX)) {
+                                needsTextProcessing = true;
+                                processNode(newNode);
+                            }
+                            if (newNode.querySelector && newNode.querySelector('a.gh-code-anchor-placeholder')) {
+                                anchorsAdded = true;
+                                console.log("GitHub Theme Script: MutationObserver detected new child anchor placeholder");
+                            }
                         }
                     }
                 });
-            } else if (mutation.type === 'characterData' && mutation.target.nodeValue.includes(MARKER_PREFIX)) {
-                 needsProcessing = true;
-                 processNode(mutation.target); // Process the changed text node
-             }
+            }
         }
-        if (needsProcessing) {
-            console.log("GitHub Theme Script: Detected mutations, re-scanning for markers...");
+        
+        if (needsTextProcessing) {
+            console.log("GitHub Theme Script: Detected new text markers, processing...");
             fetchAndReplaceMarkers();
+        }
+        
+        if (anchorsAdded) {
+            console.log("GitHub Theme Script: Detected new anchor placeholders, processing...");
+            fetchAndReplaceAnchorPlaceholders();
         }
     });
 
@@ -236,7 +399,20 @@
         subtree: true,
         characterData: true
     });
-    */
-    // --- End Initialization ---
+    
+    // Set up a periodic rescan as fallback (every 2 seconds)
+    const rescanInterval = setInterval(() => {
+        console.log("GitHub Theme Script: Performing periodic rescan...");
+        fetchAndReplaceAnchorPlaceholders();
+    }, 2000);
+    
+    // After 30 seconds, reduce scan frequency to save resources
+    setTimeout(() => {
+        console.log("GitHub Theme Script: Reducing scan frequency");
+        clearInterval(rescanInterval);
+        setInterval(fetchAndReplaceAnchorPlaceholders, 10000); // Every 10 seconds
+    }, 30000);
 
+    console.log("GitHub Theme Script: Initialization complete");
+    // --- End Initialization ---
 })(); 
