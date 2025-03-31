@@ -1,10 +1,10 @@
 /**
- * GitHub Code Renderer - Scroll Viewport Theme Script v1.1.9
+ * GitHub Code Renderer - Scroll Viewport Theme Script v1.1.11
  * Finds ##GITHUB:url:lines:theme## markers and replaces them with code blocks.
  * Also processes anchor tags with class "gh-code-anchor-placeholder".
  */
 (function() {
-    console.log("GitHub Theme Script v1.1.9: Script loading");
+    console.log("GitHub Theme Script v1.1.11: Script loading");
     
     // Determine the base URL for the API. Assumes this script is served from the same origin as the API.
     // If hosted elsewhere, this needs to be configured.
