@@ -1183,18 +1183,26 @@ app.get('/render-github-macro', (req, res) => {
   }
 
   if (isScrollViewport) {
-    console.log('Using text marker approach for Scroll Viewport');
-    
-    // Use plain text marker format which might survive filtering
-    // Format: ##GITHUB:url|lines|theme##
-    const marker = `##GITHUB:${githubUrl}|${lineRange}|${theme}##`;
-    
-    // Wrap in a paragraph to make it more likely to survive as standalone text
-    const placeholderText = `<p>${marker}</p>`;
-    
-    console.log('Generated marker:', marker);
+    // Generate a unique ID for this placeholder
+    const placeholderId = `gh-placeholder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    console.log('Generating placeholder with ID:', placeholderId);
+
+    // Create the anchor placeholder with proper escaping
+    const placeholderHtml = `
+      <a class="gh-code-anchor-placeholder" 
+         id="${escapeAttr(placeholderId)}"
+         href="#${escapeAttr(placeholderId)}" 
+         data-url="${escapeAttr(githubUrl)}" 
+         data-lines="${escapeAttr(lineRange)}" 
+         data-theme="${escapeAttr(theme)}" 
+         style="display:none !important; visibility:hidden !important;">
+           GitHub Code Placeholder
+      </a>
+    `.trim();
+
+    console.log('Generated HTML:', placeholderHtml);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(placeholderText);
+    res.send(placeholderHtml);
   } else {
     // For standard Confluence view: Directly fetch and serve code instead of redirecting
     console.log('Standard Confluence view detected, fetching code from GitHub');
