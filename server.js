@@ -1178,6 +1178,10 @@ app.get('/render-github-macro', (req, res) => {
   console.log('Line Range:', lineRange);
   console.log('Theme:', theme);
 
+  if (!githubUrl) {
+    return res.status(400).send('Missing GitHub URL parameter');
+  }
+
   if (isScrollViewport) {
     console.log('Using text marker approach for Scroll Viewport');
     
@@ -1192,10 +1196,52 @@ app.get('/render-github-macro', (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(placeholderText);
   } else {
-    // Standard Confluence view: redirect to /macro-view.html
-    console.log('Standard Confluence view detected, redirecting to macro-view.html');
-    const redirectUrl = `/macro-view.html?url=${encodeURIComponent(githubUrl)}&lines=${encodeURIComponent(lineRange)}&theme=${encodeURIComponent(theme)}`;
-    res.redirect(redirectUrl);
+    // For standard Confluence view: Directly fetch and serve code instead of redirecting
+    console.log('Standard Confluence view detected, fetching code from GitHub');
+    
+    // Normalize GitHub URL and extract repository info
+    const normalizedUrl = normalizeGitHubUrl(githubUrl);
+    if (!normalizedUrl.valid) {
+      console.error(`Invalid GitHub URL: ${githubUrl}`);
+      return res.status(400).send(`Invalid GitHub URL: ${githubUrl}`);
+    }
+    
+    // Fetch content from GitHub
+    fetchGitHubContent(normalizedUrl.apiUrl)
+      .then(content => {
+        // Extract specific lines if line range is provided
+        let codeToRender = content;
+        if (lineRange) {
+          codeToRender = extractLines(content, lineRange);
+        }
+        
+        // Detect language from file extension
+        const language = detectLanguage(normalizedUrl.extension);
+        
+        // Highlight the code
+        const highlightedCode = highlight.highlight(codeToRender, { language }).value;
+        
+        // Construct HTML response with theme class
+        const html = `
+        <div class="github-code-block theme-${theme}">
+          <pre class="hljs"><code class="language-${language}">${highlightedCode}</code></pre>
+          <div class="github-code-footer">
+            <a href="${githubUrl}" target="_blank" rel="noopener noreferrer" class="github-code-link">
+              View on GitHub
+            </a>
+            ${lineRange ? `<span class="github-code-lines">Lines: ${lineRange}</span>` : ''}
+          </div>
+        </div>
+        `;
+        
+        // Set content type and send response
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+      })
+      .catch(error => {
+        console.error(`Error fetching from GitHub: ${error.message}`);
+        res.status(500).send(`Error fetching code: ${error.message}`);
+      });
   }
 });
 
