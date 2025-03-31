@@ -1,97 +1,133 @@
-const MAX_DEPTH = 10; // Limit recursion depth for safety
+/**
+ * GitHub Code Renderer - Scroll Viewport Theme Script v2
+ * Finds and replaces hidden anchor placeholders with GitHub code blocks
+ */
+(function() {
+    // Determine the base URL for the API
+    const scriptOrigin = document.currentScript ? document.currentScript.src : window.location.origin;
+    let apiBaseUrl = new URL(scriptOrigin).origin;
+    if (apiBaseUrl.startsWith("http://")) {
+        apiBaseUrl = apiBaseUrl.replace("http://", "https://");
+    }
+    console.log("[GitHub Theme Script] Initializing with API URL:", apiBaseUrl);
 
-// REMOVED processNode and TreeWalker logic - no longer needed for text markers
+    function showError(placeholder, message) {
+        console.error("[GitHub Theme Script] Error:", message);
+        placeholder.style.display = 'block';
+        placeholder.style.visibility = 'visible';
+        placeholder.style.color = 'red';
+        placeholder.style.padding = '10px';
+        placeholder.style.border = '1px solid red';
+        placeholder.style.backgroundColor = '#fee';
+        placeholder.textContent = `[GitHub Code Error: ${message}]`;
+    }
 
-function fetchAndReplacePlaceholders() { 
-    console.log("GitHub Theme Script: Searching for hidden anchor placeholders...");
-    // Find placeholder <a> elements
-    const placeholders = document.querySelectorAll('a.gh-code-anchor-placeholder'); 
-    console.log(`GitHub Theme Script: Found ${placeholders.length} anchor placeholders to process.`);
+    function fetchAndReplacePlaceholders() {
+        console.log("[GitHub Theme Script] Searching for anchor placeholders...");
+        const placeholders = document.querySelectorAll('a.gh-code-anchor-placeholder');
+        console.log(`[GitHub Theme Script] Found ${placeholders.length} anchor placeholders to process`);
 
-    placeholders.forEach(placeholder => {
-        // Prevent reprocessing
-        if (placeholder.hasAttribute('data-github-processing')) return;
-        placeholder.setAttribute('data-github-processing', 'true');
+        placeholders.forEach(placeholder => {
+            // Skip if already processing
+            if (placeholder.hasAttribute('data-github-processing')) {
+                console.log("[GitHub Theme Script] Skipping already processing placeholder");
+                return;
+            }
+            placeholder.setAttribute('data-github-processing', 'true');
 
-        // Read data attributes from the anchor tag
-        const url = placeholder.getAttribute('data-url');
-        const lines = placeholder.getAttribute('data-lines');
-        const theme = placeholder.getAttribute('data-theme');
+            // Read data attributes
+            const url = placeholder.getAttribute('data-url');
+            const lines = placeholder.getAttribute('data-lines');
+            const theme = placeholder.getAttribute('data-theme');
 
-        if (!url) {
-            showError(placeholder, "Placeholder anchor is missing data-url attribute.");
-            return;
-        }
+            console.log("[GitHub Theme Script] Processing placeholder:", {
+                url: url,
+                lines: lines,
+                theme: theme
+            });
 
-        // Construct API URL (GET request to /html)
-        const apiUrl = new URL(apiBaseUrl + "/html");
-        apiUrl.searchParams.append('url', url);
-        if (lines) {
-            apiUrl.searchParams.append('lines', lines);
-        }
-        apiUrl.searchParams.append('theme', theme);
+            if (!url) {
+                showError(placeholder, "Missing data-url attribute");
+                return;
+            }
 
-        console.log("GitHub Theme Script: Fetching", apiUrl.toString());
+            // Construct API URL
+            const apiUrl = new URL(apiBaseUrl + "/html");
+            apiUrl.searchParams.append('url', url);
+            if (lines) {
+                apiUrl.searchParams.append('lines', lines);
+            }
+            apiUrl.searchParams.append('theme', theme || 'github-light');
 
-        fetch(apiUrl.toString())
-            .then(response => {
-                if (!response.ok) {
-                     return response.text().then(text => { throw new Error(`HTTP ${response.status}: ${text || response.statusText}`); });
-                }
-                return response.text(); // Expecting raw HTML
-            })
-            .then(html => {
-                // Replace the placeholder <a> element with the fetched HTML
-                const container = document.createElement('div'); // Use temp div to parse
-                container.innerHTML = html; 
-                // The fetched HTML should contain the final code block structure
-                if (container.firstChild) {
-                    if (placeholder.parentNode) { 
-                         // Replace the placeholder <a> element entirely
+            console.log("[GitHub Theme Script] Fetching from:", apiUrl.toString());
+
+            // Fetch and replace
+            fetch(apiUrl.toString())
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
+                        });
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    console.log("[GitHub Theme Script] Received HTML response");
+                    
+                    // Create container for the fetched HTML
+                    const container = document.createElement('div');
+                    container.setAttribute('data-github-rendered', 'true');
+                    container.innerHTML = html;
+
+                    // Replace the placeholder with the rendered content
+                    if (container.firstChild && placeholder.parentNode) {
+                        console.log("[GitHub Theme Script] Replacing placeholder with rendered content");
                         placeholder.parentNode.replaceChild(container.firstChild, placeholder);
                     } else {
-                        console.warn("GitHub Theme Script: Placeholder anchor has no parent during replacement:", placeholder);
+                        showError(placeholder, "Invalid HTML response or placeholder lost parent");
                     }
-                } else {
-                     placeholder.textContent = "[Empty Response]"; // Should not happen if /html works
-                }
-            })
-            .catch(error => {
-                console.error("GitHub Theme Script: Error fetching code for", url, error);
-                showError(placeholder, `Error: ${error.message}`);
-            });
-    });
-}
-
-function showError(placeholderElement, message) {
-    // Display error message visibly, even though the placeholder was hidden
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'gh-code-error';
-    errorDiv.innerHTML = `<div style="color: red; padding: 10px; border: 1px solid red; background-color: #fee;"><strong>GitHub Code Error:</strong> ${escapeHtml(message)}</div>`;
-    
-    // Replace the hidden anchor with the visible error message
-    if (placeholderElement.parentNode) {
-        placeholderElement.parentNode.replaceChild(errorDiv, placeholderElement);
+                })
+                .catch(error => {
+                    console.error("[GitHub Theme Script] Error fetching code:", error);
+                    showError(placeholder, error.message);
+                });
+        });
     }
-}
 
-// Helper function for escaping HTML - needed for error message display
-function escapeHtml(str) {
-  return (str || '').toString()
-       .replace(/&/g, "&amp;")
-       .replace(/</g, "&lt;")
-       .replace(/>/g, "&gt;")
-       .replace(/"/g, "&quot;")
-       .replace(/'/g, "&#039;");
-}
+    // Set up MutationObserver to watch for new placeholders
+    const observer = new MutationObserver((mutations) => {
+        let shouldProcess = false;
+        
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                // Check added nodes for placeholders
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.matches('a.gh-code-anchor-placeholder') || 
+                            node.querySelector('a.gh-code-anchor-placeholder')) {
+                            shouldProcess = true;
+                        }
+                    }
+                });
+            }
+        }
 
-// --- Initialization ---
+        if (shouldProcess) {
+            console.log("[GitHub Theme Script] New placeholders detected, processing...");
+            fetchAndReplacePlaceholders();
+        }
+    });
 
-// Directly call the function to find and replace placeholders
-function initialScan() {
-     console.log("GitHub Theme Script: Performing initial scan for placeholders...");
-     // No need for DOM walking anymore, just query directly
-     fetchAndReplacePlaceholders();
- }
+    // Start observing the entire document
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
 
-// Run on DOMContentLoaded or immediately if already loaded 
+    // Initial scan
+    console.log("[GitHub Theme Script] Performing initial scan...");
+    fetchAndReplacePlaceholders();
+
+    // Re-scan periodically in case observer misses something
+    setInterval(fetchAndReplacePlaceholders, 2000);
+})(); 
