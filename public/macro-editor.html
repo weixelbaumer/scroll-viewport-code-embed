@@ -257,29 +257,23 @@
                     return;
                 }
                 
-                // Construct macroData using the FLAT structure Confluence expects for saveMacro
+                // Construct macroParams using the PROPER STRUCTURE Confluence expects for saveMacro
+                // This structure must match the parameter identifiers in atlassian-connect.json
                 const macroParams = {
-                    url: url,
-                    theme: theme // Always include theme
+                    url: url, // Required parameter
+                    theme: theme, // Always include theme
+                    lines: lines || '' // Always include lines (even if empty)
                 };
-
-                // Only add lines if provided (optional parameter)
-                if (lines) {
-                    macroParams.lines = lines;
-                }
                 
                 log(`Saving macro data: ${JSON.stringify(macroParams)}`);
                 
                 // Save the macro using the Atlassian Connect API
-                AP.confluence.saveMacro(macroParams, function() { // Pass the flat macroParams object
-                    log('Macro saved successfully');
-                    showStatus('success', 'GitHub code block inserted successfully!');
-                    
-                    // Give a moment for the user to see the success message
-                    setTimeout(function() {
-                        AP.confluence.closeMacroEditor();
-                    }, 500);
-                });
+                AP.confluence.saveMacro(macroParams);
+                
+                // Give a moment for the user to see the success message
+                setTimeout(function() {
+                    AP.confluence.closeMacroEditor();
+                }, 500);
             } catch (err) {
                 log(`Error saving macro: ${err.message}`);
                 showStatus('error', `Error saving macro: ${err.message}`);

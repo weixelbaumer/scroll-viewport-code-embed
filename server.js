@@ -1162,39 +1162,95 @@ app.get('/raw', async (req, res) => {
 
 // ROUTE HANDLER FOR DYNAMIC MACRO RENDERING
 app.get('/render-github-macro', (req, res) => {
-  // Extract parameters - check both direct query params and Atlassian Connect format
-  let githubUrl = req.query.url;
-  let lineRange = req.query.lines || '';
-  let theme = req.query.theme || 'github-light';
+  // Extract parameters - check all possible parameter formats
+  // Debug log the full query to help diagnose issues
+  console.log('=== GitHub Macro Render Request ===');
+  console.log('Full request query:', req.query);
+  console.log('User-Agent:', req.headers['user-agent'] || '');
   
-  // Attempt to parse parameters from Atlassian Connect format
-  // Atlassian sometimes sends parameters as stringified JSON in 'parameterJson'
-  if (!githubUrl && req.query.parameterJson) {
+  let githubUrl = null;
+  let lineRange = '';
+  let theme = 'github-light';
+  
+  // Try different parameter formats that Atlassian Connect might send:
+  
+  // 1. Direct url parameter (most common)
+  if (req.query.url) {
+    githubUrl = req.query.url;
+    lineRange = req.query.lines || '';
+    theme = req.query.theme || 'github-light';
+    console.log('Found parameters in direct query format');
+  }
+  
+  // 2. Structured parameters format (from atlassian-connect.json descriptor)
+  else if (req.query['url.value']) {
+    githubUrl = req.query['url.value'];
+    lineRange = req.query['lines.value'] || '';
+    theme = req.query['theme.value'] || 'github-light';
+    console.log('Found parameters in structured format (*.value)');
+  }
+  
+  // 3. JSON parameter format
+  else if (req.query.parameterJson) {
     try {
       const params = JSON.parse(req.query.parameterJson);
       githubUrl = params.url || '';
       lineRange = params.lines || '';
       theme = params.theme || 'github-light';
+      console.log('Found parameters in JSON format');
     } catch (e) {
       console.error('Error parsing parameterJson:', e);
     }
   }
   
-  // Log all request query parameters for debugging
-  console.log('=== GitHub Macro Render Request ===');
-  console.log('All query parameters:', req.query);
-  console.log('User-Agent:', req.headers['user-agent'] || '');
+  // 4. Nested parameters object
+  else if (req.query.parameters) {
+    try {
+      // Try parsing as JSON string if it's a string
+      const params = typeof req.query.parameters === 'string' 
+        ? JSON.parse(req.query.parameters) 
+        : req.query.parameters;
+      
+      if (params.url) {
+        githubUrl = params.url.value || params.url;
+        lineRange = params.lines ? (params.lines.value || params.lines) : '';
+        theme = params.theme ? (params.theme.value || params.theme) : 'github-light';
+        console.log('Found parameters in nested parameters object');
+      }
+    } catch (e) {
+      console.error('Error parsing parameters object:', e);
+    }
+  }
+  
+  // 5. Last resort - look for any parameter that might contain the URL
+  else {
+    // Look for any parameter that might reasonably be a GitHub URL
+    for (const key in req.query) {
+      const value = req.query[key];
+      if (typeof value === 'string' && 
+          (value.includes('github.com') || value.includes('githubusercontent.com'))) {
+        githubUrl = value;
+        console.log(`Found likely GitHub URL in parameter: ${key}`);
+        break;
+      }
+    }
+  }
+  
+  // Log the extracted parameters
+  console.log('Extracted GitHub URL:', githubUrl);
+  console.log('Extracted Line Range:', lineRange);
+  console.log('Extracted Theme:', theme);
   console.log('Is Scroll Viewport:', (req.headers['user-agent'] || '').includes('ScrollExporter'));
-  console.log('GitHub URL:', githubUrl);
-  console.log('Line Range:', lineRange);
-  console.log('Theme:', theme);
 
   // Check for missing URL parameter
   if (!githubUrl) {
-    return res.status(400).send('Missing GitHub URL parameter');
+    return res.status(400).send('Missing GitHub URL parameter. Check browser console for details.');
   }
 
-  if (req.headers['user-agent'] && req.headers['user-agent'].includes('ScrollExporter')) {
+  // Determine if this is a Scroll Viewport request
+  const isScrollViewport = (req.headers['user-agent'] || '').includes('ScrollExporter');
+
+  if (isScrollViewport) {
     // Generate a unique ID for this placeholder
     const placeholderId = `gh-placeholder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     console.log('Generating placeholder with ID:', placeholderId);
