@@ -79,7 +79,7 @@ To enable GitHub code blocks in Scroll Viewport, add custom JavaScript to your S
 
 ```javascript
 // GitHub Fetcher for Scroll Viewport
-// Version 1.1.4
+// Version 1.1.9
 
 // Only run on live sites, not in previews
 if (!vp.preview.isPagePreview() && !vp.preview.isSitePreview()) {
