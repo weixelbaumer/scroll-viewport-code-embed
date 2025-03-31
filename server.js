@@ -1162,27 +1162,39 @@ app.get('/raw', async (req, res) => {
 
 // ROUTE HANDLER FOR DYNAMIC MACRO RENDERING
 app.get('/render-github-macro', (req, res) => {
-  // Extract parameters
-  const githubUrl = req.query.url; 
-  const lineRange = req.query.lines || ''; 
-  const theme = req.query.theme || 'github-light'; 
-
-  // Check User-Agent with detailed logging
-  const userAgent = req.headers['user-agent'] || '';
-  const isScrollViewport = userAgent.includes('ScrollExporter');
+  // Extract parameters - check both direct query params and Atlassian Connect format
+  let githubUrl = req.query.url;
+  let lineRange = req.query.lines || '';
+  let theme = req.query.theme || 'github-light';
   
+  // Attempt to parse parameters from Atlassian Connect format
+  // Atlassian sometimes sends parameters as stringified JSON in 'parameterJson'
+  if (!githubUrl && req.query.parameterJson) {
+    try {
+      const params = JSON.parse(req.query.parameterJson);
+      githubUrl = params.url || '';
+      lineRange = params.lines || '';
+      theme = params.theme || 'github-light';
+    } catch (e) {
+      console.error('Error parsing parameterJson:', e);
+    }
+  }
+  
+  // Log all request query parameters for debugging
   console.log('=== GitHub Macro Render Request ===');
-  console.log('User-Agent:', userAgent);
-  console.log('Is Scroll Viewport:', isScrollViewport);
+  console.log('All query parameters:', req.query);
+  console.log('User-Agent:', req.headers['user-agent'] || '');
+  console.log('Is Scroll Viewport:', (req.headers['user-agent'] || '').includes('ScrollExporter'));
   console.log('GitHub URL:', githubUrl);
   console.log('Line Range:', lineRange);
   console.log('Theme:', theme);
 
+  // Check for missing URL parameter
   if (!githubUrl) {
     return res.status(400).send('Missing GitHub URL parameter');
   }
 
-  if (isScrollViewport) {
+  if (req.headers['user-agent'] && req.headers['user-agent'].includes('ScrollExporter')) {
     // Generate a unique ID for this placeholder
     const placeholderId = `gh-placeholder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     console.log('Generating placeholder with ID:', placeholderId);
