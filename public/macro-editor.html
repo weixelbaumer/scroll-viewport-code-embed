@@ -258,16 +258,15 @@
                 } else {
                     document.getElementById('lines-error').style.display = 'none';
                 }
-                // Revert to saving parameters wrapped in { parameters: ... }
+                // Simplify to save only the URL parameter
                 const macroData = {
                     parameters: {
-                        url: { value: url },
-                        ...(lines && { lines: { value: lines }}),
-                        theme: { value: theme || 'github-light' }
+                        url: { value: url }
+                        // Only include URL as per simplified atlassian-connect.json
                     }
                 };
                 
-                log(`Saving macro data with parameters key: ${JSON.stringify(macroData)}`);
+                log(`Saving simplified macro data (URL only): ${JSON.stringify(macroData)}`);
                 AP.confluence.saveMacro(macroData);
 AP.confluence.closeMacroEditor();
                 AP.confluence.closeMacroEditor();

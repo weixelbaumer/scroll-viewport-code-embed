@@ -55,38 +55,6 @@
                         },
                         "type": "string",
                         "required": true
-                    },
-                    {
-                        "identifier": "lines",
-                        "name": {
-                            "value": "Line Range (Optional)"
-                        },
-                        "description": {
-                            "value": "Specify a line range (e.g., 10-20 or 15). Leave empty for the whole file."
-                        },
-                        "type": "string",
-                        "required": false
-                    },
-                    {
-                        "identifier": "theme",
-                        "name": {
-                            "value": "Theme"
-                        },
-                        "description": {
-                            "value": "Select the syntax highlighting theme."
-                        },
-                        "type": "enum",
-                        "required": false,
-                        "defaultValue": "github-light",
-                        "values": [
-                            "github-light",
-                            "github-dark",
-                            "monokai",
-                            "dracula",
-                            "vs2015",
-                            "xcode",
-                            "atom-one-dark"
-                        ]
                     }
                 ],
                 "editor": {

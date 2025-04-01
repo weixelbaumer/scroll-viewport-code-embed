@@ -155,16 +155,15 @@
           return;
         }
         
-        // Revert to saving parameters wrapped in { parameters: ... }
+        // Simplify to save only the URL parameter
         const macroData = {
             parameters: {
-                url: { value: url },
-                ...(lines && { lines: { value: lines }}),
-                theme: { value: document.getElementById('theme').value }
+                url: { value: url }
+                // Only include URL as per simplified atlassian-connect.json
             }
         };
         
-        console.log('Saving macro data with parameters key:', JSON.stringify(macroData));
+        console.log('Saving simplified macro data (URL only):', JSON.stringify(macroData));
         
         // Submit macro data back to Confluence
         AP.confluence.saveMacro(macroData);
