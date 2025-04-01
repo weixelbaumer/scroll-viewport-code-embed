@@ -258,16 +258,17 @@
                 } else {
                     document.getElementById('lines-error').style.display = 'none';
                 }
-                // Try saving parameters as a simple key-value map
-                const simpleParams = {
-                    url: url, // Raw value
-                    ...(lines && { lines: lines }), // Raw value if present
-                    theme: theme || 'github-light' // Raw value
+                // Revert to saving parameters wrapped in { parameters: ... }
+                const macroData = {
+                    parameters: {
+                        url: { value: url },
+                        ...(lines && { lines: { value: lines }}),
+                        theme: { value: theme || 'github-light' }
+                    }
                 };
-
-                log(`Attempting to save simple key-value params: ${JSON.stringify(simpleParams)}`);
-                // Pass the simple parameters object directly to saveMacro
-                AP.confluence.saveMacro(simpleParams);
+                
+                log(`Saving macro data with parameters key: ${JSON.stringify(macroData)}`);
+                AP.confluence.saveMacro(macroData);
 AP.confluence.closeMacroEditor();
                 AP.confluence.closeMacroEditor();
             } catch (err) {
