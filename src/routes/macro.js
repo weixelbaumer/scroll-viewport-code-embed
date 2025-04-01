@@ -14,7 +14,15 @@ const THEMES = {
 };
 
 router.post('/macro', async (req, res) => {
-    const { url, lineRange, theme = THEMES.GITHUB_LIGHT } = req.body;
+    const { url, lineRange, theme = THEMES.GITHUB_LIGHT } = req.query;
+    
+    if (!url) {
+        return res.status(400).json({
+            error: 'Missing GitHub URL parameter',
+            details: 'The GitHub URL parameter is required.',
+            receivedQuery: req.query
+        });
+    }
     
     try {
         const githubUrl = normalizeGitHubUrl(url);

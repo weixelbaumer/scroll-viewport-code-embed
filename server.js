@@ -30,100 +30,68 @@ const NGROK_URL = process.env.NGROK_URL || '';
 // Initialize express
 const app = express();
 
-// *** Initialize Atlassian Connect Express (ACE) ***
-// This creates the 'addon' object and MUST come before routes using its middleware.
-// Ensure database.sqlite is created in the current directory
-console.log("Current directory:", __dirname);
-console.log("Database file will be created at:", path.resolve(__dirname, 'database.sqlite'));
+// Ensure database directory exists
+const dbDir = path.join(__dirname, 'db');
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir);
+}
+
+// Set database path
+const dbPath = path.join(dbDir, 'database.sqlite');
+console.log("Database will be created at:", dbPath);
 
 // Delete any existing database to start clean
 try {
-    if (fs.existsSync(path.resolve(__dirname, 'database.sqlite'))) {
-        fs.unlinkSync(path.resolve(__dirname, 'database.sqlite'));
-        console.log("Existing database file deleted");
-    }
+  if (fs.existsSync(dbPath)) {
+    fs.unlinkSync(dbPath);
+    console.log("Existing database file deleted");
+  }
+  // Create empty database file
+  fs.writeFileSync(dbPath, '');
+  console.log("Empty database file created");
 } catch (err) {
-    console.error("Error deleting existing database:", err);
+  console.error("Error managing database file:", err);
 }
 
-// Add a monkey patch for Sequelize to force file-based storage
-if (process.env.FORCE_DB_FILE) {
-    console.log("FORCE_DB_FILE environment variable detected! Adding monkey patch to force file-based storage.");
-    
-    // Save original require function
-    const originalRequire = module.require;
-    
-    // Monkey patch require to intercept Sequelize loading
-    module.require = function(path) {
-        const result = originalRequire.apply(this, arguments);
-        
-        // If this is the sequelize module, monkey patch its constructor
-        if (path === 'sequelize' || path.endsWith('/sequelize')) {
-            console.log("Sequelize module detected! Patching constructor...");
-            
-            // Save the original constructor
-            const originalSequelize = result;
-            
-            // Override the constructor
-            function PatchedSequelize() {
-                // Call the original constructor
-                const instance = new originalSequelize(...arguments);
-                
-                // Force storage to be file-based
-                if (instance.options.dialect === 'sqlite') {
-                    console.log("PATCHING: Forcing SQLite to use file-based storage");
-                    console.log("BEFORE:", instance.options.storage);
-                    instance.options.storage = path.resolve(__dirname, 'database.sqlite');
-                    console.log("AFTER:", instance.options.storage);
-                }
-                
-                return instance;
-            }
-            
-            // Copy prototype and static properties
-            PatchedSequelize.prototype = originalSequelize.prototype;
-            Object.setPrototypeOf(PatchedSequelize, originalSequelize);
-            
-            // Return the patched constructor
-            return PatchedSequelize;
+const config = {
+  config: {
+    development: {
+      port: 3000,
+      localBaseUrl: process.env.AC_LOCAL_BASE_URL || 'https://dev.tandav.com',
+      store: {
+        adapter: 'sequelize',
+        dialect: 'sqlite',
+        storage: dbPath,
+        username: '',
+        password: '',
+        database: 'github-fetcher',
+        logging: false
+      },
+      watch: false
+    },
+    production: {
+      port: process.env.PORT || 3000,
+      store: {
+        adapter: 'sequelize',
+        dialect: 'postgres',
+        url: process.env.DATABASE_URL,
+        ssl: true,
+        dialectOptions: {
+          ssl: {
+            require: true,
+            rejectUnauthorized: false
+          }
         }
-        
-        // Otherwise, return the original module
-        return result;
-    };
-}
-
-const ace_config = {
-    config: {
-        development: {
-            port: 3000,
-            sequelize: {
-                storage: path.resolve(__dirname, 'database.sqlite') // Set at the sequelize level
-            },
-            store: {
-                adapter: 'sequelize',
-                dialect: 'sqlite3',
-                storage: path.resolve(__dirname, 'database.sqlite'), // Use absolute path
-                logging: console.log // Enable SQL logging
-            }
-        },
-        production: {
-             port: process.env.PORT || 3000,
-             store: {
-                 adapter: 'sequelize',
-                 dialect: 'postgres',
-                 url: process.env.DATABASE_URL
-             }
-        }
+      }
     }
+  }
 };
 
-console.log("ACE configuration:", JSON.stringify(ace_config, null, 2));
-const addon = ace(app, ace_config);
+console.log("ACE configuration:", JSON.stringify(config, null, 2));
+const addon = ace(app, config);
 
-// *** ADD THIS LOGGING LINE ***
+// Log the specific store config being used
 console.log(`ACE Initialized. Active environment: [${addon.config.environment()}]`);
-// Log the specific store config being used based on the environment
 console.log(`Store configuration being used:`, JSON.stringify(addon.config.store(), null, 2));
 
 // Middleware like body-parser, static files, etc., should come after ACE init
@@ -138,11 +106,6 @@ app.use(cors());
 // Make sure body-parser middleware is used BEFORE your routes
 app.use(bodyParser.json()); // For parsing application/json
 app.use(bodyParser.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
-
-// Serve the atlassian-connect.json directly
-app.get('/atlassian-connect.json', (req, res) => {
-    res.sendFile(path.join(__dirname, 'atlassian-connect.json'));
-});
 
 // Add ngrok-skip-browser-warning header for all responses
 app.use((req, res, next) => {
@@ -1157,54 +1120,6 @@ app.get('/atlassian-connect-bypass.json', (req, res) => {
   });
 });
 
-// Redirect any direct requests to atlassian-connect.json to the bypass version
-app.get('/atlassian-connect.json', (req, res) => {
-  // Set bypass headers on the redirect
-  res.set('ngrok-skip-browser-warning', 'true');
-  res.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36');
-  res.set('X-Requested-With', 'XMLHttpRequest');
-  
-  // Using HTML/JavaScript redirect instead of standard redirect to keep headers
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Redirecting...</title>
-      <script>
-        // Bypass script content here
-        // Break out of iframe
-        if (window !== window.top) {
-          try { window.top.location.href = window.location.href; } catch(e) {}
-        }
-        
-        // Fetch with custom headers
-        fetch('/atlassian-connect-bypass.json', {
-          headers: {
-            'ngrok-skip-browser-warning': 'true',
-            'User-Agent': 'Mozilla/5.0',
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        })
-        .then(response => response.json())
-        .then(data => {
-          document.open();
-          document.write(JSON.stringify(data));
-          document.close();
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          window.location.href = '/atlassian-connect-bypass.json';
-        });
-      </script>
-    </head>
-    <body>
-      <p>Redirecting to Atlassian Connect descriptor...</p>
-    </body>
-    </html>
-  `);
-});
-
 // Raw content endpoint - directly fetch and return raw GitHub content
 app.get('/raw', async (req, res) => {
   try {
@@ -1295,113 +1210,161 @@ function bypassAuthentication(req, res, next) {
 
 // ROUTE HANDLER FOR DYNAMIC MACRO RENDERING
 app.all('/render-github-macro', bypassAuthentication, async (req, res) => {
-  // <<< KEY LOGGING ADDED HERE >>>
   console.log(`-----------------------------------------------------`);
   console.log(`[${new Date().toISOString()}] Incoming /render-github-macro request`);
   console.log(`Method: ${req.method}`);
-  console.log(`URL: ${req.originalUrl}`); // Log the full original URL with query string
-  console.log(`Query Params:`, JSON.stringify(req.query, null, 2));
-  console.log(`Body Params:`, JSON.stringify(req.body, null, 2));
-  console.log(`Headers:`, JSON.stringify(req.headers, null, 2)); // Log headers too for context like x-scroll-viewport
+  console.log(`URL: ${req.originalUrl}`);
+  console.log(`Query Params:`, JSON.stringify(req.query, null, 2)); // Log full query params
+  console.log(`Body Params:`, JSON.stringify(req.body, null, 2)); // Log full body params
+  console.log(`Headers:`, JSON.stringify(req.headers, null, 2)); // Log headers for debugging
   console.log(`-----------------------------------------------------`);
 
-  // Extract parameters - prioritize query params based on client script and curl test, fallback to body
-  const githubUrl = req.query.url || req.body.url;
-  const lineRange = req.query.lines || req.body.lines;
-  const theme = req.query.theme || req.body.theme || 'github'; // Default theme
-
-  console.log(`Extracted Params: URL='${githubUrl}', Lines='${lineRange}', Theme='${theme}'`); // Log extracted params
-
-  // Check for the mandatory URL parameter
-  if (!githubUrl) {
-    console.error('Validation Error: Missing GitHub URL parameter.'); // Log before sending 400
-    // Send a more informative error message back
-    return res.status(400).json({ 
-        error: 'Missing GitHub URL parameter.',
-        receivedQuery: req.query,
-        receivedBody: req.body 
-    });
-  }
-
-  // Check if running in Scroll Viewport context
-  const isScrollViewport = req.headers['x-scroll-viewport'] === 'true';
-  console.log(`Scroll Viewport Context: ${isScrollViewport}`);
-
   try {
-    let processedUrl = githubUrl;
-    let extractedLines = lineRange; 
-    let extractedTheme = theme;
-
-    // Use validateAndTransformGitHubUrl if it exists (defined previously around line 419)
-    if (typeof validateAndTransformGitHubUrl === 'function') {
-        try {
-            console.log(`Using validateAndTransformGitHubUrl for: ${githubUrl}`);
-            // Pass the original URL as entered by user
-            const validationResult = validateAndTransformGitHubUrl(githubUrl); 
-            processedUrl = validationResult.url; // URL ready for fetch/normalize
-            // Use explicitly passed params first, then fall back to extracted ones
-            extractedLines = lineRange || validationResult.extractedLines; 
-            extractedTheme = theme || validationResult.extractedTheme || 'github';
-            console.log(`After validateAndTransformGitHubUrl: URL='${processedUrl}', Lines='${extractedLines}', Theme='${extractedTheme}'`);
-        } catch (validationError) {
-            console.error(`URL validation/transformation failed: ${validationError.message}`);
-            return res.status(400).json({ 
-                error: `Invalid GitHub URL format: ${validationError.message}`,
-                originalUrl: githubUrl
-            });
+    // Extract parameters from query - handle ALL possible structures
+    let githubUrl, lineRange, theme;
+    
+    // Check for parameters in different possible locations and formats
+    if (req.query.parameters && req.query.parameters.url && req.query.parameters.url.value) {
+      // Nested structure from Confluence
+      githubUrl = req.query.parameters.url.value;
+      lineRange = req.query.parameters.lines ? req.query.parameters.lines.value : '';
+      theme = req.query.parameters.theme ? req.query.parameters.theme.value : 'github-light';
+      console.log('Extracted from nested parameters structure');
+    } 
+    else if (req.query.url) {
+      // Direct parameters in query
+      githubUrl = req.query.url;
+      lineRange = req.query.lines || '';
+      theme = req.query.theme || 'github-light';
+      console.log('Extracted from direct query parameters');
+    }
+    else if (req.body && req.body.parameters && req.body.parameters.url) {
+      // Nested in body from Confluence
+      githubUrl = req.body.parameters.url.value;
+      lineRange = req.body.parameters.lines ? req.body.parameters.lines.value : '';
+      theme = req.body.parameters.theme ? req.body.parameters.theme.value : 'github-light';
+      console.log('Extracted from body nested parameters');
+    }
+    else if (req.body && req.body.url) {
+      // Direct in body
+      githubUrl = req.body.url;
+      lineRange = req.body.lines || '';
+      theme = req.body.theme || 'github-light';
+      console.log('Extracted from direct body parameters');
+    }
+    else {
+      // Try to find parameters anywhere in the request
+      console.log('Searching for parameters in full request...');
+      console.log('Full request query:', req.query);
+      console.log('Full request body:', req.body);
+      
+      // Last resort - search all properties
+      const findParam = (obj, key) => {
+        if (!obj || typeof obj !== 'object') return undefined;
+        
+        if (obj[key] !== undefined) return obj[key];
+        
+        for (const prop in obj) {
+          const result = findParam(obj[prop], key);
+          if (result !== undefined) return result;
         }
-    } else {
-         console.log(`validateAndTransformGitHubUrl not found, using raw params.`);
-         processedUrl = githubUrl;
-         extractedLines = lineRange;
-         extractedTheme = theme;
+        
+        return undefined;
+      };
+      
+      githubUrl = findParam(req.query, 'url') || findParam(req.body, 'url');
+      lineRange = findParam(req.query, 'lines') || findParam(req.body, 'lines') || '';
+      theme = findParam(req.query, 'theme') || findParam(req.body, 'theme') || 'github-light';
+      
+      if (githubUrl) {
+        console.log('Found parameters using deep search');
+      }
     }
 
-    // Fetch content
-    console.log(`Fetching content for: ${processedUrl}`);
-    const content = await fetchGitHubContent(processedUrl); // Ensure defined
+    console.log('Final Extracted Parameters:', {
+      url: githubUrl,
+      lines: lineRange,
+      theme: theme
+    });
 
-    // Extract lines
-    console.log(`Extracting lines: '${extractedLines}'`);
-    let codeToRender = extractLines(content, extractedLines); // Ensure defined
-
-    // Detect language
-    const language = detectLanguage(processedUrl); // Ensure defined
-    console.log(`Detected language: ${language}`);
-
-    // Get theme styles
-    const themeStyles = getThemeStyles(extractedTheme); // Ensure defined
-
-    // Respond based on context
-    if (isScrollViewport) {
-        const uniqueId = `gh-placeholder-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-        console.log(`ScrollViewport detected. Rendering hidden anchor placeholder #${uniqueId}`);
-        const anchorHtml = `<a 
-                              id="${escapeAttr(uniqueId)}" 
-                              class="gh-code-anchor-placeholder" 
-                              href="#" 
-                              style="display: none;" 
-                              data-url="${escapeAttr(githubUrl)}" 
-                              data-lines="${escapeAttr(lineRange || '')}" 
-                              data-theme="${escapeAttr(theme || 'github')}"
-                              aria-hidden="true">GitHub Content Placeholder</a>`;
-        res.type('text/html').send(anchorHtml); // Set content type
-
-    } else {
-        console.log(`Regular view detected. Rendering full code block.`);
-        const htmlResponse = `
-          <style>${themeStyles}</style>
-          <pre><code class="hljs ${language}">${escapeHtml(codeToRender)}</code></pre>
-        `;
-        res.type('text/html').send(htmlResponse); // Set content type
+    // Validate required parameters
+    if (!githubUrl) {
+      console.error('Missing GitHub URL parameter');
+      return res.status(400).json({
+        error: 'Missing GitHub URL parameter',
+        details: 'The GitHub URL parameter is required.',
+        receivedQuery: req.query // Send back the query for debugging
+      });
     }
 
+    // Check if running in Scroll Viewport context
+    const isScrollViewport = req.headers['x-scroll-viewport'] === 'true';
+    
+    try {
+      // Transform and validate the GitHub URL
+      // Pass only the URL, lines/theme are handled separately now
+      const { url: processedUrl, extractedLines, extractedTheme } = validateAndTransformGitHubUrl(githubUrl);
+      
+      // Use explicit parameters first, fall back to extracted values only if needed (though should be covered by query params)
+      const finalLines = lineRange || extractedLines;
+      const finalTheme = theme || extractedTheme || 'github';
+
+      // Fetch the content
+      const response = await axios.get(processedUrl, {
+        headers: {
+          'User-Agent': 'GitHub-Code-Renderer',
+          'Accept': 'text/plain'
+        }
+      });
+
+      let code = response.data;
+      
+      // Extract specific lines if requested
+      if (finalLines) {
+        code = extractLines(code, finalLines);
+      }
+
+      // Determine language from file extension
+      const language = detectLanguage(processedUrl.split('/').pop().split('.').pop());
+      
+      // Get theme styles
+      const themeStyles = getThemeStyles(finalTheme);
+
+      // Return appropriate response based on context
+      if (isScrollViewport) {
+        const uniqueId = `gh-code-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        res.send(`
+          <div id="${uniqueId}" 
+               class="github-code-block" 
+               data-url="${githubUrl}"
+               data-lines="${finalLines || ''}"
+               data-theme="${finalTheme}">
+            Loading GitHub code...
+          </div>
+        `);
+      } else {
+        // Return the rendered code block
+        res.send(`
+          <div class="github-code-block" data-theme="${finalTheme}">
+            <style>${themeStyles}</style>
+            <pre><code class="language-${language}">${escapeHtml(code)}</code></pre>
+          </div>
+        `);
+      }
+    } catch (error) {
+      console.error('Error processing GitHub content:', error);
+      res.status(500).json({
+        error: 'Error processing GitHub content',
+        message: error.message,
+        details: error.stack
+      });
+    }
   } catch (error) {
-    console.error(`Error in /render-github-macro handler for URL "${githubUrl}":`, error);
-    // Send JSON error for easier parsing by fetch error handler
-    res.status(500).json({ 
-        error: `Error fetching or processing GitHub content: ${error.message}`,
-        urlProcessed: githubUrl // Reference the original URL attempted
+    console.error('General error in macro handler:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+      details: error.stack
     });
   }
 });
@@ -1430,7 +1393,7 @@ function escapeHtml(unsafe) {
          .replace(/>/g, "&gt;")
          .replace(/"/g, "&quot;")
          .replace(/'/g, "&#039;");
- }
+}
 
 // Get the port from the ACE configuration
 const port = addon.config.port();

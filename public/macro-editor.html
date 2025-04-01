@@ -244,36 +244,33 @@
                 log(`Validating inputs - URL: ${url}, Lines: ${lines}, Theme: ${theme}`);
                 
                 // Validate URL (required)
-                const urlValid = validateUrl(url);
-                document.getElementById('url-error').style.display = urlValid ? 'none' : 'block';
-                
-                // Validate line range (optional)
-                const linesValid = validateLineRange(lines);
-                document.getElementById('lines-error').style.display = linesValid ? 'none' : 'block';
-                
-                // If any validation fails, stop here
-                if (!urlValid || !linesValid) {
-                    log('Validation failed');
+                if (!validateUrl(url)) {
+                    document.getElementById('url-error').style.display = 'block';
                     return;
+                } else {
+                    document.getElementById('url-error').style.display = 'none';
                 }
                 
-                // Construct macroParams using the PROPER STRUCTURE Confluence expects for saveMacro
-                // This structure must match the parameter identifiers in atlassian-connect.json
-                const macroParams = {
-                    url: url, // Required parameter
-                    theme: theme, // Always include theme
-                    lines: lines || '' // Always include lines (even if empty)
-                };
-                
-                log(`Saving macro data: ${JSON.stringify(macroParams)}`);
-                
-                // Save the macro using the Atlassian Connect API
-                AP.confluence.saveMacro(macroParams);
-                
-                // Give a moment for the user to see the success message
-                setTimeout(function() {
-                    AP.confluence.closeMacroEditor();
-                }, 500);
+                // Validate line range (optional)
+                if (lines && !validateLineRange(lines)) {
+                    document.getElementById('lines-error').style.display = 'block';
+                    return;
+                } else {
+                    document.getElementById('lines-error').style.display = 'none';
+                }
+// Create parameters in proper Atlassian Connect format
+const macroData = {
+    parameters: {
+        url: { value: url },
+        ...(lines && { lines: { value: lines }}),
+        theme: { value: theme || 'github-light' }
+    }
+};
+
+log(`Saving macro data: ${JSON.stringify(macroData)}`);
+AP.confluence.saveMacro(macroData);
+AP.confluence.closeMacroEditor();
+                AP.confluence.closeMacroEditor();
             } catch (err) {
                 log(`Error saving macro: ${err.message}`);
                 showStatus('error', `Error saving macro: ${err.message}`);

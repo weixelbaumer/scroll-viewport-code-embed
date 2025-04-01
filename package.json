@@ -1,6 +1,6 @@
 {
   "name": "github-fetcher",
-  "version": "1.1.12",
+  "version": "1.1.14",
   "description": "GitHub code snippet renderer for embedding in Confluence with Scroll Viewport",
   "main": "server.js",
   "scripts": {

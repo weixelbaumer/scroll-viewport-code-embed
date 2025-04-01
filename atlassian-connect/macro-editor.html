@@ -155,12 +155,28 @@
           return;
         }
         
-        // Save the macro data
+        // Save the macro data in the format expected by Atlassian Connect
         const macroData = {
-          url: url,
-          lines: document.getElementById('lines').value.trim(),
-          theme: document.getElementById('theme').value
+          parameters: {
+            url: {
+              value: url
+            }
+          }
         };
+        
+        // Add optional parameters if provided
+        const lines = document.getElementById('lines').value.trim();
+        if (lines) {
+          macroData.parameters.lines = {
+            value: lines
+          };
+        }
+        
+        macroData.parameters.theme = {
+          value: document.getElementById('theme').value
+        };
+        
+        console.log('Saving macro with data:', JSON.stringify(macroData));
         
         // Submit macro data back to Confluence
         AP.confluence.saveMacro(macroData);

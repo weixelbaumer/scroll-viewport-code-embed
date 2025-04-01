@@ -44,29 +44,40 @@
           return;
         }
         
-        let githubUrl;
+        let githubUrl, lines, theme;
         
-        // Check if we have the direct URL parameter (new format)
-        if (data.url) {
+        // Handle Atlassian Connect parameter format
+        if (data.parameters && data.parameters.url) {
+          githubUrl = data.parameters.url.value;
+          lines = data.parameters.lines ? data.parameters.lines.value : '';
+          theme = data.parameters.theme ? data.parameters.theme.value : 'github-light';
+          console.log('Using parameters format:', { githubUrl, lines, theme });
+        }
+        // Handle direct properties format
+        else if (data.url) {
           githubUrl = data.url;
-        } 
+          lines = data.lines || '';
+          theme = data.theme || 'github-light';
+          console.log('Using direct properties format:', { githubUrl, lines, theme });
+        }
         // Backward compatibility with old format
         else if (data.repository && data.path) {
           const repository = data.repository;
           const path = data.path;
           const branch = data.branch || 'main';
           githubUrl = `https://github.com/${repository}/blob/${branch}/${path}`;
+          lines = data.lines || '';
+          theme = data.theme || 'github-light';
+          console.log('Using legacy format:', { githubUrl, lines, theme });
         } else {
           document.getElementById('content').innerHTML = `
             <div class="error">
               <strong>Error:</strong> Missing required GitHub URL.
             </div>
           `;
+          console.error('No GitHub URL found in macro data:', data);
           return;
         }
-        
-        const lines = data.lines || '';
-        const theme = data.theme || 'github';
         
         // Get base URL from current window location
         const baseUrl = window.location.origin;

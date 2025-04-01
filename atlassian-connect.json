@@ -1,12 +1,12 @@
 {
     "key": "com.apryse.github-fetcher",
-    "name": "GitHub Fetcher",
-    "description": "Renders code snippets from GitHub with syntax highlighting for Scroll Viewport",
-    "version": "1.1.12",
+    "name": "GitHub Code Fetcher",
+    "description": "Fetches and displays code from GitHub with syntax highlighting.",
+    "version": "1.1.14",
     "baseUrl": "https://dev.tandav.com",
     "vendor": {
         "name": "Apryse",
-        "url": "https://dev.tandav.com"
+        "url": "https://apryse.com"
     },
     "authentication": {
         "type": "jwt"
@@ -30,16 +30,15 @@
         "dynamicContentMacros": [
             {
                 "key": "github-code-macro",
-                "name": { 
-                    "value": "GitHub Code Block" 
+                "name": {
+                    "value": "GitHub Code Block"
                 },
-                "url": "/render-github-macro",
-                "description": { 
-                    "value": "Live fetch and render code from GitHub repositories" 
+                "description": {
+                    "value": "Embeds and syntax highlights code from a GitHub URL."
                 },
+                "url": "https://dev.tandav.com/render-github-macro",
                 "outputType": "block",
                 "bodyType": "none",
-                "placeholderUrl": "/macro-view.html",
                 "icon": {
                     "width": 64,
                     "height": 64,
@@ -48,43 +47,52 @@
                 "parameters": [
                     {
                         "identifier": "url",
-                        "name": { 
-                            "value": "GitHub URL" 
+                        "name": {
+                            "value": "GitHub URL"
                         },
-                        "description": { 
-                            "value": "URL to GitHub file" 
+                        "description": {
+                            "value": "The full URL to the file on GitHub (e.g., https://github.com/user/repo/blob/main/file.js)"
                         },
                         "type": "string",
                         "required": true
                     },
                     {
                         "identifier": "lines",
-                        "name": { 
-                            "value": "Line Range" 
+                        "name": {
+                            "value": "Line Range (Optional)"
                         },
-                        "description": { 
-                            "value": "Line range to display (e.g., 5-15)" 
+                        "description": {
+                            "value": "Specify a line range (e.g., 10-20 or 15). Leave empty for the whole file."
                         },
-                        "type": "string", 
+                        "type": "string",
                         "required": false
                     },
                     {
                         "identifier": "theme",
-                        "name": { 
-                            "value": "Theme" 
+                        "name": {
+                            "value": "Theme"
                         },
-                        "description": { 
-                            "value": "Syntax highlighting theme" 
+                        "description": {
+                            "value": "Select the syntax highlighting theme."
                         },
-                        "type": "string",
+                        "type": "enum",
                         "required": false,
-                        "defaultValue": "github-light"
+                        "defaultValue": "github-light",
+                        "values": [
+                            "github-light",
+                            "github-dark",
+                            "monokai",
+                            "dracula",
+                            "vs2015",
+                            "xcode",
+                            "atom-one-dark"
+                        ]
                     }
                 ],
                 "editor": {
                     "url": "/macro-editor.html",
-                    "width": "80%",
-                    "height": "400px",
+                    "width": "600px",
+                    "height": "450px",
                     "editTitle": {
                         "value": "Edit GitHub Code Block"
                     },
@@ -104,5 +112,6 @@
                 "url": "/documentation.html"
             }
         ]
-    }
+    },
+    "schemaVersion": "1.1.14"
 }
