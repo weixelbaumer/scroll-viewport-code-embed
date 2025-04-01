@@ -34,48 +34,41 @@
     AP.require(['confluence'], function(confluence) {
       
       // Get macro parameters
-      confluence.getMacroData(function(data) {
-        if (!data) {
+      // Use getMacroBody to retrieve the JSON string
+      confluence.getMacroBody(function(bodyString) {
+        if (!bodyString) {
           document.getElementById('content').innerHTML = `
             <div class="error">
-              <strong>Error:</strong> Missing macro parameters.
+              <strong>Error:</strong> Macro body is empty. Cannot load parameters.
             </div>
           `;
+          console.error('Macro body is empty');
           return;
         }
         
         let githubUrl, lines, theme;
         
-        // Handle Atlassian Connect parameter format
-        if (data.parameters && data.parameters.url) {
-          githubUrl = data.parameters.url.value;
-          lines = data.parameters.lines ? data.parameters.lines.value : '';
-          theme = data.parameters.theme ? data.parameters.theme.value : 'github-light';
-          console.log('Using parameters format:', { githubUrl, lines, theme });
-        }
-        // Handle direct properties format
-        else if (data.url) {
-          githubUrl = data.url;
-          lines = data.lines || '';
-          theme = data.theme || 'github-light';
-          console.log('Using direct properties format:', { githubUrl, lines, theme });
-        }
-        // Backward compatibility with old format
-        else if (data.repository && data.path) {
-          const repository = data.repository;
-          const path = data.path;
-          const branch = data.branch || 'main';
-          githubUrl = `https://github.com/${repository}/blob/${branch}/${path}`;
-          lines = data.lines || '';
-          theme = data.theme || 'github-light';
-          console.log('Using legacy format:', { githubUrl, lines, theme });
-        } else {
+        try {
+          // Parse the JSON string from the macro body
+          const bodyData = JSON.parse(bodyString);
+          console.log('Parsed macro body data:', bodyData);
+          
+          githubUrl = bodyData.url;
+          lines = bodyData.lines || ''; // Default if missing
+          theme = bodyData.theme || 'github-light'; // Default if missing
+          
+          if (!githubUrl) {
+            throw new Error("Required 'url' property missing in macro body data.");
+          }
+          
+        } catch (e) {
           document.getElementById('content').innerHTML = `
             <div class="error">
-              <strong>Error:</strong> Missing required GitHub URL.
+              <strong>Error:</strong> Failed to parse macro data. ${e.message}
+              <pre style="font-size: 10px; margin-top: 5px;">${bodyString}</pre>
             </div>
           `;
-          console.error('No GitHub URL found in macro data:', data);
+          console.error('Error parsing macro body:', e, 'Body:', bodyString);
           return;
         }
         
