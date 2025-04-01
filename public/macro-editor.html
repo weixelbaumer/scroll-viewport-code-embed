@@ -258,17 +258,16 @@
                 } else {
                     document.getElementById('lines-error').style.display = 'none';
                 }
-// Create parameters in proper Atlassian Connect format
-const macroData = {
-    parameters: {
-        url: { value: url },
-        ...(lines && { lines: { value: lines }}),
-        theme: { value: theme || 'github-light' }
-    }
-};
+                // Create the parameters object directly
+                const params = {
+                    url: { value: url },
+                    ...(lines && { lines: { value: lines }}),
+                    theme: { value: theme || 'github-light' }
+                };
 
-log(`Saving macro data: ${JSON.stringify(macroData)}`);
-AP.confluence.saveMacro(macroData);
+                log(`Saving macro parameters directly: ${JSON.stringify(params)}`);
+                // Pass the parameters object directly to saveMacro
+                AP.confluence.saveMacro(params);
 AP.confluence.closeMacroEditor();
                 AP.confluence.closeMacroEditor();
             } catch (err) {

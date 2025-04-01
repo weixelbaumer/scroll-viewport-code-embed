@@ -155,31 +155,17 @@
           return;
         }
         
-        // Save the macro data in the format expected by Atlassian Connect
-        const macroData = {
-          parameters: {
-            url: {
-              value: url
-            }
-          }
+        // Save the macro data parameters directly
+        const params = {
+            url: { value: url },
+            ...(lines && { lines: { value: lines }}),
+            theme: { value: document.getElementById('theme').value }
         };
         
-        // Add optional parameters if provided
-        const lines = document.getElementById('lines').value.trim();
-        if (lines) {
-          macroData.parameters.lines = {
-            value: lines
-          };
-        }
+        console.log('Saving macro parameters directly:', JSON.stringify(params));
         
-        macroData.parameters.theme = {
-          value: document.getElementById('theme').value
-        };
-        
-        console.log('Saving macro with data:', JSON.stringify(macroData));
-        
-        // Submit macro data back to Confluence
-        AP.confluence.saveMacro(macroData);
+        // Submit parameters object directly back to Confluence
+        AP.confluence.saveMacro(params);
         AP.dialog.close();
       });
       
