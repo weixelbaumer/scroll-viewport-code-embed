@@ -153,21 +153,6 @@ app.get('/render-github-macro', async (req, res) => {
         });
     }
     
-    try {
-        logDebug(`Processing GitHub URL: ${url}, Lines: ${lines}, Theme: ${theme}`);
-        const rawUrl = githubHelper.normalizeGitHubUrl(url);
-        const code = await githubHelper.fetchGitHubContent(rawUrl, lines);
-        const html = githubHelper.generateCodeBlock(code, rawUrl, theme);
-        res.setHeader('Content-Type', 'text/html');
-        res.send(html);
-    } catch (error) {
-        console.error('/render-github-macro GET error:', error);
-        res.status(400).json({
-            error: 'Failed to fetch or render code',
-            details: error.message,
-            receivedQuery: req.query
-        });
-    }
 });
 
 // Serve macro view/editor files (if needed)

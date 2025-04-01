@@ -155,17 +155,17 @@
           return;
         }
         
-        // Save the macro data parameters directly
-        const params = {
-            url: { value: url },
-            ...(lines && { lines: { value: lines }}),
-            theme: { value: document.getElementById('theme').value }
+        // Try saving parameters as a simple key-value map
+        const simpleParams = {
+            url: url, // Raw value
+            ...(lines && { lines: lines }), // Raw value if present
+            theme: document.getElementById('theme').value // Raw value
         };
         
-        console.log('Saving macro parameters directly:', JSON.stringify(params));
+        console.log('Attempting to save simple key-value params:', JSON.stringify(simpleParams));
         
-        // Submit parameters object directly back to Confluence
-        AP.confluence.saveMacro(params);
+        // Submit simple parameters object directly back to Confluence
+        AP.confluence.saveMacro(simpleParams);
         AP.dialog.close();
       });
       
