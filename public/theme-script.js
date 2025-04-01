@@ -113,7 +113,7 @@
             }
 
             // Construct API URL (GET request to /html)
-            const apiUrl = new URL(apiBaseUrl + "/html");
+            const apiUrl = new URL(apiBaseUrl + "/render-github-macro");
             apiUrl.searchParams.append('url', url);
             if (lines) {
                 apiUrl.searchParams.append('lines', lines);
@@ -220,7 +220,7 @@
             }
 
             // Construct API URL (GET request to /html)
-            const apiUrl = new URL(apiBaseUrl + "/html");
+            const apiUrl = new URL(apiBaseUrl + "/render-github-macro");
             apiUrl.searchParams.append('url', url);
             if (lines) {
                 apiUrl.searchParams.append('lines', lines);

@@ -1,205 +1,61 @@
-# GitHub Fetcher for Confluence & Scroll Viewport
+# GitHub Code Block Renderer for Confluence
 
-A Confluence app that allows users to easily embed syntax-highlighted code from GitHub repositories into Confluence pages, with full compatibility for Scroll Viewport.
-
-## Overview
-
-This app provides two key components:
-
-1. **GitHub Code Block Macro** - A Confluence macro that makes it easy to embed code snippets from GitHub.
-2. **Scroll Viewport Integration** - Special handling to ensure code blocks render correctly in Scroll Viewport documentation.
+A Confluence app that renders code blocks from GitHub repositories with syntax highlighting.
 
 ## Features
 
-- Embed code directly from GitHub repositories
+- Fetch and display code from GitHub repositories
+- Support for line range selections (e.g., 5-10, 15,20,25)
 - Syntax highlighting for various programming languages
-- Multiple themes including light and dark modes
-- Line range selection to display only relevant portions of code
-- Special handling for Scroll Viewport compatibility
-- Direct HTML output option for manual embedding
+- Special handling for Scroll Viewport with anchor-based placeholders
+
+## The Scroll Viewport Solution
+
+To solve issues with rendering code in Scroll Viewport, we've implemented a dual approach:
+
+1. When the app is loaded in a Scroll Viewport context (detected via HTTP header), it renders a hidden anchor element with the GitHub URL, line range, and theme stored as data attributes.
+
+2. A client-side script (`theme-script.js`) then detects these anchors and makes direct API calls to fetch and render the code, bypassing the Scroll Viewport limitations.
 
 ## Installation
 
-### Prerequisites
+1. Clone this repository
+2. Install dependencies with `npm install`
+3. Run the server with `./start-simple-server.sh`
 
-- Node.js 14+ and npm
-- Cloudflare Account and `cloudflared` CLI tool installed and logged in
+## Configuration
 
-### Development Setup
-
-1. **Configure Cloudflare Tunnel**
-
-   ```bash
-   cloudflared tunnel create github-fetcher-dev
-   ```
-
-   Create Config File:
-   ```yaml
-   tunnel: github-fetcher-dev
-   credentials-file: /PATH/TO/YOUR/.cloudflared/<TUNNEL_ID>.json
-   ingress:
-     - hostname: dev.tandav.com
-       service: http://localhost:3000
-     - service: http_status:404
-   ```
-
-   Route DNS:
-   ```bash
-   cloudflared tunnel route dns github-fetcher-dev dev.tandav.com
-   ```
-
-2. **Run the Application**
-
-   ```bash
-   npm install
-   npm start
-   
-   # In a separate terminal
-   cloudflared tunnel --config ~/.cloudflared/config.yml run github-fetcher-dev
-   ```
-
-## Installing the Confluence App
-
-1. Log in to your Confluence instance as an administrator
-2. Go to Settings > Manage apps
-3. Click "Upload app"
-4. Enter the URL to your hosted atlassian-connect.json descriptor:
-   ```
-   https://dev.tandav.com/atlassian-connect.json
-   ```
-
-## Configure Scroll Viewport Theme
-
-To enable GitHub code blocks in Scroll Viewport, add custom JavaScript to your Scroll Viewport theme:
-
-1. In your Scroll Viewport site, click **Edit Theme** from the site overview
-2. Go to the **Templates** menu
-3. In the **Additional** section, expand the JS editor
-4. Copy and paste the following JavaScript code:
-
-```javascript
-// GitHub Fetcher for Scroll Viewport
-// Version 1.1.11
-
-// Only run on live sites, not in previews
-if (!vp.preview.isPagePreview() && !vp.preview.isSitePreview()) {
-  // Load highlight.js for syntax highlighting
-  vp.loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js')
-    .then(() => {
-      // Load the theme CSS (default to github-light)
-      const linkEl = document.createElement('link');
-      linkEl.rel = 'stylesheet';
-      linkEl.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css';
-      document.head.appendChild(linkEl);
-      
-      // Process GitHub code markers in the article content
-      processGitHubCodeMarkers();
-    });
-}
-
-function processGitHubCodeMarkers() {
-  // Find all article content areas
-  const contentAreas = document.querySelectorAll('.article-content, .confluence-content, .vp-article__content');
-  
-  contentAreas.forEach(content => {
-    // Look for our markers using regex
-    const markerRegex = /##GITHUB:([^|]+)\|([^|]*)\|([^#]*)##/g;
-    const html = content.innerHTML;
-    
-    // Replace markers with actual code blocks
-    content.innerHTML = html.replace(markerRegex, (match, url, lines, theme) => {
-      // Create a placeholder while loading
-      const id = 'gh-code-' + Math.random().toString(36).substring(2, 10);
-      fetchGitHubCode(url, lines, theme, id);
-      return `<div id="${id}" class="github-code-block">
-                <div class="loading-indicator">Loading code from GitHub...</div>
-              </div>`;
-    });
-  });
-}
-
-function fetchGitHubCode(url, lines, theme, containerId) {
-  // Convert github.com URL to raw URL if needed
-  let rawUrl = url;
-  if (url.includes('github.com') && !url.includes('raw.githubusercontent.com')) {
-    rawUrl = url.replace('github.com', 'raw.githubusercontent.com')
-               .replace('/blob/', '/');
-  }
-  
-  // Fetch the code
-  fetch(rawUrl)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
-      }
-      return response.text();
-    })
-    .then(code => {
-      // Process line range if specified
-      let processedCode = code;
-      if (lines && lines.trim()) {
-        const lineRange = lines.trim();
-        const lineArray = code.split('\n');
-        
-        if (lineRange.includes('-')) {
-          // Range of lines
-          const [start, end] = lineRange.split('-').map(num => parseInt(num, 10));
-          processedCode = lineArray.slice(start - 1, end).join('\n');
-        } else {
-          // Single line
-          const lineNum = parseInt(lineRange, 10);
-          processedCode = lineArray[lineNum - 1];
-        }
-      }
-      
-      // Render the code with highlight.js
-      const container = document.getElementById(containerId);
-      if (container) {
-        // Determine language from file extension
-        const fileExt = url.split('.').pop().toLowerCase();
-        const pre = document.createElement('pre');
-        const code = document.createElement('code');
-        
-        // Apply appropriate language class if determinable
-        if (fileExt) {
-          code.className = `language-${fileExt}`;
-        }
-        
-        code.textContent = processedCode;
-        pre.appendChild(code);
-        container.innerHTML = '';
-        container.appendChild(pre);
-        
-        // Apply highlighting
-        if (window.hljs) {
-          window.hljs.highlightElement(code);
-        }
-      }
-    })
-    .catch(error => {
-      // Show error in the container
-      const container = document.getElementById(containerId);
-      if (container) {
-        container.innerHTML = `<div class="error-message">Error loading code: ${error.message}</div>`;
-      }
-    });
-}
-```
+The app uses a Cloudflare tunnel to expose the local server to the internet.
+The base URL is configured to `https://dev.tandav.com` in the `atlassian-connect.json` file.
 
 ## Usage
 
-### Adding a GitHub Code Block to a Confluence Page
+1. Add the app to your Confluence instance
+2. Insert the "GitHub Code Block" macro in your page
+3. Enter a GitHub URL and optional line range
+4. The macro will render the code with syntax highlighting
 
-1. Edit your Confluence page
-2. Click the '+' icon to add a macro
-3. Search for and select "GitHub Code"
-4. Enter the GitHub URL, optional line range, and select a theme
-5. Click "Insert" to add the macro
+## Troubleshooting
 
-### Supported GitHub URLs
+If you're having issues:
 
-- Regular GitHub file URLs: `https://github.com/owner/repo/blob/branch/path/to/file.js`
-- Raw GitHub content URLs: `https://raw.githubusercontent.com/owner/repo/branch/path/to/file.js`
+1. Check the server logs in `simple-server.log`
+2. Verify the Cloudflare tunnel is running
+3. Ensure the app is properly installed in your Confluence instance
+
+## Simplified Server
+
+We've implemented a simplified server that avoids using atlassian-connect-express to eliminate database-related issues. The server:
+
+1. Processes both traditional and Scroll Viewport requests
+2. Generates hidden anchors with unique IDs for Scroll Viewport
+3. Logs all requests to a log file for easy debugging
+
+To start the simplified server:
+
+```bash
+./start-simple-server.sh
+```
 
 ## License
 

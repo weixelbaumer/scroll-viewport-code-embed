@@ -12,6 +12,9 @@ const cache = require('memory-cache');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
+const ace = require('atlassian-connect-express');
+const bodyParser = require('body-parser');
+const http = require('http');
 
 // Load environment variables
 dotenv.config();
@@ -26,11 +29,115 @@ const NGROK_URL = process.env.NGROK_URL || '';
 
 // Initialize express
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// *** Initialize Atlassian Connect Express (ACE) ***
+// This creates the 'addon' object and MUST come before routes using its middleware.
+// Ensure database.sqlite is created in the current directory
+console.log("Current directory:", __dirname);
+console.log("Database file will be created at:", path.resolve(__dirname, 'database.sqlite'));
+
+// Delete any existing database to start clean
+try {
+    if (fs.existsSync(path.resolve(__dirname, 'database.sqlite'))) {
+        fs.unlinkSync(path.resolve(__dirname, 'database.sqlite'));
+        console.log("Existing database file deleted");
+    }
+} catch (err) {
+    console.error("Error deleting existing database:", err);
+}
+
+// Add a monkey patch for Sequelize to force file-based storage
+if (process.env.FORCE_DB_FILE) {
+    console.log("FORCE_DB_FILE environment variable detected! Adding monkey patch to force file-based storage.");
+    
+    // Save original require function
+    const originalRequire = module.require;
+    
+    // Monkey patch require to intercept Sequelize loading
+    module.require = function(path) {
+        const result = originalRequire.apply(this, arguments);
+        
+        // If this is the sequelize module, monkey patch its constructor
+        if (path === 'sequelize' || path.endsWith('/sequelize')) {
+            console.log("Sequelize module detected! Patching constructor...");
+            
+            // Save the original constructor
+            const originalSequelize = result;
+            
+            // Override the constructor
+            function PatchedSequelize() {
+                // Call the original constructor
+                const instance = new originalSequelize(...arguments);
+                
+                // Force storage to be file-based
+                if (instance.options.dialect === 'sqlite') {
+                    console.log("PATCHING: Forcing SQLite to use file-based storage");
+                    console.log("BEFORE:", instance.options.storage);
+                    instance.options.storage = path.resolve(__dirname, 'database.sqlite');
+                    console.log("AFTER:", instance.options.storage);
+                }
+                
+                return instance;
+            }
+            
+            // Copy prototype and static properties
+            PatchedSequelize.prototype = originalSequelize.prototype;
+            Object.setPrototypeOf(PatchedSequelize, originalSequelize);
+            
+            // Return the patched constructor
+            return PatchedSequelize;
+        }
+        
+        // Otherwise, return the original module
+        return result;
+    };
+}
+
+const ace_config = {
+    config: {
+        development: {
+            port: 3000,
+            sequelize: {
+                storage: path.resolve(__dirname, 'database.sqlite') // Set at the sequelize level
+            },
+            store: {
+                adapter: 'sequelize',
+                dialect: 'sqlite3',
+                storage: path.resolve(__dirname, 'database.sqlite'), // Use absolute path
+                logging: console.log // Enable SQL logging
+            }
+        },
+        production: {
+             port: process.env.PORT || 3000,
+             store: {
+                 adapter: 'sequelize',
+                 dialect: 'postgres',
+                 url: process.env.DATABASE_URL
+             }
+        }
+    }
+};
+
+console.log("ACE configuration:", JSON.stringify(ace_config, null, 2));
+const addon = ace(app, ace_config);
+
+// *** ADD THIS LOGGING LINE ***
+console.log(`ACE Initialized. Active environment: [${addon.config.environment()}]`);
+// Log the specific store config being used based on the environment
+console.log(`Store configuration being used:`, JSON.stringify(addon.config.store(), null, 2));
+
+// Middleware like body-parser, static files, etc., should come after ACE init
+// but before your specific routes.
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Enable CORS
 app.use(cors());
+
+// Make sure body-parser middleware is used BEFORE your routes
+app.use(bodyParser.json()); // For parsing application/json
+app.use(bodyParser.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
 
 // Serve the atlassian-connect.json directly
 app.get('/atlassian-connect.json', (req, res) => {
@@ -94,9 +201,6 @@ app.use((req, res, next) => {
   
   next();
 });
-
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Add a special dummy trigger image to help with CORB workarounds
 app.get('/dummy-trigger.png', (req, res) => {
@@ -1160,190 +1264,182 @@ app.get('/raw', async (req, res) => {
   }
 });
 
+// *** Add the route handler for the lifecycle callback ***
+// This endpoint receives the installation data from Confluence.
+// ACE automatically handles saving the client key, shared secret, etc.
+// You only need custom logic here if you want to perform actions AFTER installation.
+app.post('/installed', (req, res) => {
+  console.log("=== INSTALLATION REQUEST RECEIVED ===");
+  console.log("Client Key:", req.body.clientKey);
+  console.log("Base URL:", req.body.baseUrl);
+  
+  // Store the installation details in a global variable for simplicity
+  global.installations = global.installations || {};
+  global.installations[req.body.clientKey] = {
+    clientKey: req.body.clientKey,
+    baseUrl: req.body.baseUrl,
+    sharedSecret: req.body.sharedSecret
+  };
+  
+  console.log("Installation stored in memory:", global.installations[req.body.clientKey] ? "YES" : "NO");
+  console.log("App installed successfully!");
+  res.sendStatus(200);
+});
+
+// Simple authentication bypass middleware for testing
+function bypassAuthentication(req, res, next) {
+  // For testing purposes, bypass authentication
+  console.log("BYPASSING AUTHENTICATION FOR TESTING");
+  next();
+}
+
 // ROUTE HANDLER FOR DYNAMIC MACRO RENDERING
-app.get('/render-github-macro', (req, res) => {
-  // Extract parameters - check all possible parameter formats
-  // Debug log the full query to help diagnose issues
-  console.log('=== GitHub Macro Render Request ===');
-  console.log('Full request query:', req.query);
-  console.log('User-Agent:', req.headers['user-agent'] || '');
-  
-  let githubUrl = null;
-  let lineRange = '';
-  let theme = 'github-light';
-  
-  // Try different parameter formats that Atlassian Connect might send:
-  
-  // 1. Direct url parameter (most common)
-  if (req.query.url) {
-    githubUrl = req.query.url;
-    lineRange = req.query.lines || '';
-    theme = req.query.theme || 'github-light';
-    console.log('Found parameters in direct query format');
-  }
-  
-  // 2. Structured parameters format (from atlassian-connect.json descriptor)
-  else if (req.query['url.value']) {
-    githubUrl = req.query['url.value'];
-    lineRange = req.query['lines.value'] || '';
-    theme = req.query['theme.value'] || 'github-light';
-    console.log('Found parameters in structured format (*.value)');
-  }
-  
-  // 3. JSON parameter format
-  else if (req.query.parameterJson) {
-    try {
-      const params = JSON.parse(req.query.parameterJson);
-      githubUrl = params.url || '';
-      lineRange = params.lines || '';
-      theme = params.theme || 'github-light';
-      console.log('Found parameters in JSON format');
-    } catch (e) {
-      console.error('Error parsing parameterJson:', e);
-    }
-  }
-  
-  // 4. Nested parameters object
-  else if (req.query.parameters) {
-    try {
-      // Try parsing as JSON string if it's a string
-      const params = typeof req.query.parameters === 'string' 
-        ? JSON.parse(req.query.parameters) 
-        : req.query.parameters;
-      
-      if (params.url) {
-        githubUrl = params.url.value || params.url;
-        lineRange = params.lines ? (params.lines.value || params.lines) : '';
-        theme = params.theme ? (params.theme.value || params.theme) : 'github-light';
-        console.log('Found parameters in nested parameters object');
-      }
-    } catch (e) {
-      console.error('Error parsing parameters object:', e);
-    }
-  }
-  
-  // 5. Last resort - look for any parameter that might contain the URL
-  else {
-    // Look for any parameter that might reasonably be a GitHub URL
-    for (const key in req.query) {
-      const value = req.query[key];
-      if (typeof value === 'string' && 
-          (value.includes('github.com') || value.includes('githubusercontent.com'))) {
-        githubUrl = value;
-        console.log(`Found likely GitHub URL in parameter: ${key}`);
-        break;
-      }
-    }
-  }
-  
-  // Log the extracted parameters
-  console.log('Extracted GitHub URL:', githubUrl);
-  console.log('Extracted Line Range:', lineRange);
-  console.log('Extracted Theme:', theme);
-  console.log('Is Scroll Viewport:', (req.headers['user-agent'] || '').includes('ScrollExporter'));
+app.all('/render-github-macro', bypassAuthentication, async (req, res) => {
+  // <<< KEY LOGGING ADDED HERE >>>
+  console.log(`-----------------------------------------------------`);
+  console.log(`[${new Date().toISOString()}] Incoming /render-github-macro request`);
+  console.log(`Method: ${req.method}`);
+  console.log(`URL: ${req.originalUrl}`); // Log the full original URL with query string
+  console.log(`Query Params:`, JSON.stringify(req.query, null, 2));
+  console.log(`Body Params:`, JSON.stringify(req.body, null, 2));
+  console.log(`Headers:`, JSON.stringify(req.headers, null, 2)); // Log headers too for context like x-scroll-viewport
+  console.log(`-----------------------------------------------------`);
 
-  // Check for missing URL parameter
+  // Extract parameters - prioritize query params based on client script and curl test, fallback to body
+  const githubUrl = req.query.url || req.body.url;
+  const lineRange = req.query.lines || req.body.lines;
+  const theme = req.query.theme || req.body.theme || 'github'; // Default theme
+
+  console.log(`Extracted Params: URL='${githubUrl}', Lines='${lineRange}', Theme='${theme}'`); // Log extracted params
+
+  // Check for the mandatory URL parameter
   if (!githubUrl) {
-    return res.status(400).send('Missing GitHub URL parameter. Check browser console for details.');
+    console.error('Validation Error: Missing GitHub URL parameter.'); // Log before sending 400
+    // Send a more informative error message back
+    return res.status(400).json({ 
+        error: 'Missing GitHub URL parameter.',
+        receivedQuery: req.query,
+        receivedBody: req.body 
+    });
   }
 
-  // Determine if this is a Scroll Viewport request
-  const isScrollViewport = (req.headers['user-agent'] || '').includes('ScrollExporter');
+  // Check if running in Scroll Viewport context
+  const isScrollViewport = req.headers['x-scroll-viewport'] === 'true';
+  console.log(`Scroll Viewport Context: ${isScrollViewport}`);
 
-  if (isScrollViewport) {
-    // Generate a unique ID for this placeholder
-    const placeholderId = `gh-placeholder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    console.log('Generating placeholder with ID:', placeholderId);
+  try {
+    let processedUrl = githubUrl;
+    let extractedLines = lineRange; 
+    let extractedTheme = theme;
 
-    // Create the anchor placeholder with proper escaping
-    const placeholderHtml = `
-      <a class="gh-code-anchor-placeholder" 
-         id="${escapeAttr(placeholderId)}"
-         href="#${escapeAttr(placeholderId)}" 
-         data-url="${escapeAttr(githubUrl)}" 
-         data-lines="${escapeAttr(lineRange)}" 
-         data-theme="${escapeAttr(theme)}" 
-         style="display:none !important; visibility:hidden !important;">
-           GitHub Code Placeholder
-      </a>
-    `.trim();
-
-    console.log('Generated HTML:', placeholderHtml);
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(placeholderHtml);
-  } else {
-    // For standard Confluence view: Directly fetch and serve code instead of redirecting
-    console.log('Standard Confluence view detected, fetching code from GitHub');
-    
-    // Normalize GitHub URL and extract repository info
-    const normalizedUrl = normalizeGitHubUrl(githubUrl);
-    if (!normalizedUrl.valid) {
-      console.error(`Invalid GitHub URL: ${githubUrl}`);
-      return res.status(400).send(`Invalid GitHub URL: ${githubUrl}`);
-    }
-    
-    // Fetch content from GitHub
-    fetchGitHubContent(normalizedUrl.apiUrl)
-      .then(content => {
-        // Extract specific lines if line range is provided
-        let codeToRender = content;
-        if (lineRange) {
-          codeToRender = extractLines(content, lineRange);
+    // Use validateAndTransformGitHubUrl if it exists (defined previously around line 419)
+    if (typeof validateAndTransformGitHubUrl === 'function') {
+        try {
+            console.log(`Using validateAndTransformGitHubUrl for: ${githubUrl}`);
+            // Pass the original URL as entered by user
+            const validationResult = validateAndTransformGitHubUrl(githubUrl); 
+            processedUrl = validationResult.url; // URL ready for fetch/normalize
+            // Use explicitly passed params first, then fall back to extracted ones
+            extractedLines = lineRange || validationResult.extractedLines; 
+            extractedTheme = theme || validationResult.extractedTheme || 'github';
+            console.log(`After validateAndTransformGitHubUrl: URL='${processedUrl}', Lines='${extractedLines}', Theme='${extractedTheme}'`);
+        } catch (validationError) {
+            console.error(`URL validation/transformation failed: ${validationError.message}`);
+            return res.status(400).json({ 
+                error: `Invalid GitHub URL format: ${validationError.message}`,
+                originalUrl: githubUrl
+            });
         }
-        
-        // Detect language from file extension
-        const language = detectLanguage(normalizedUrl.extension);
-        
-        // Highlight the code
-        const highlightedCode = highlight.highlight(codeToRender, { language }).value;
-        
-        // Construct HTML response with theme class
-        const html = `
-        <div class="github-code-block theme-${theme}">
-          <pre class="hljs"><code class="language-${language}">${highlightedCode}</code></pre>
-          <div class="github-code-footer">
-            <a href="${githubUrl}" target="_blank" rel="noopener noreferrer" class="github-code-link">
-              View on GitHub
-            </a>
-            ${lineRange ? `<span class="github-code-lines">Lines: ${lineRange}</span>` : ''}
-          </div>
-        </div>
+    } else {
+         console.log(`validateAndTransformGitHubUrl not found, using raw params.`);
+         processedUrl = githubUrl;
+         extractedLines = lineRange;
+         extractedTheme = theme;
+    }
+
+    // Fetch content
+    console.log(`Fetching content for: ${processedUrl}`);
+    const content = await fetchGitHubContent(processedUrl); // Ensure defined
+
+    // Extract lines
+    console.log(`Extracting lines: '${extractedLines}'`);
+    let codeToRender = extractLines(content, extractedLines); // Ensure defined
+
+    // Detect language
+    const language = detectLanguage(processedUrl); // Ensure defined
+    console.log(`Detected language: ${language}`);
+
+    // Get theme styles
+    const themeStyles = getThemeStyles(extractedTheme); // Ensure defined
+
+    // Respond based on context
+    if (isScrollViewport) {
+        const uniqueId = `gh-placeholder-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        console.log(`ScrollViewport detected. Rendering hidden anchor placeholder #${uniqueId}`);
+        const anchorHtml = `<a 
+                              id="${escapeAttr(uniqueId)}" 
+                              class="gh-code-anchor-placeholder" 
+                              href="#" 
+                              style="display: none;" 
+                              data-url="${escapeAttr(githubUrl)}" 
+                              data-lines="${escapeAttr(lineRange || '')}" 
+                              data-theme="${escapeAttr(theme || 'github')}"
+                              aria-hidden="true">GitHub Content Placeholder</a>`;
+        res.type('text/html').send(anchorHtml); // Set content type
+
+    } else {
+        console.log(`Regular view detected. Rendering full code block.`);
+        const htmlResponse = `
+          <style>${themeStyles}</style>
+          <pre><code class="hljs ${language}">${escapeHtml(codeToRender)}</code></pre>
         `;
-        
-        // Set content type and send response
-        res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.send(html);
-      })
-      .catch(error => {
-        console.error(`Error fetching from GitHub: ${error.message}`);
-        res.status(500).send(`Error fetching code: ${error.message}`);
-      });
+        res.type('text/html').send(htmlResponse); // Set content type
+    }
+
+  } catch (error) {
+    console.error(`Error in /render-github-macro handler for URL "${githubUrl}":`, error);
+    // Send JSON error for easier parsing by fetch error handler
+    res.status(500).json({ 
+        error: `Error fetching or processing GitHub content: ${error.message}`,
+        urlProcessed: githubUrl // Reference the original URL attempted
+    });
   }
 });
 
-// Helper function to escape HTML attributes
+// Helper function escapeAttr (ensure it's defined)
 function escapeAttr(str) {
-  return (str || '')
-    .toString()
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[<>"'&]/g, function(match) {
+        switch (match) {
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#39;';
+            case '&': return '&amp;';
+            default: return match;
+        }
+    });
 }
 
-// Start the server
-const server = app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`Atlassian Connect Base URL should be set to: ${process.env.AC_LOCAL_BASE_URL || 'YOUR_TUNNEL_URL'}`);
-  }
-}).on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Please use a different port.`);
-    process.exit(1);
-  } else {
-    console.error('Server error:', err);
-    process.exit(1);
+// Helper function escapeHtml (ensure it's defined)
+function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return String(unsafe)
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+ }
+
+// Get the port from the ACE configuration
+const port = addon.config.port();
+
+// Start the server using http
+http.createServer(app).listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+  // Log the base URL in development for testing
+  if (addon.config.environment() === 'development') {
+      console.log(`Atlassian Connect Base URL should be set to: ${addon.config.localBaseUrl()}`);
   }
 });
