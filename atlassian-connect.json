@@ -36,7 +36,7 @@
                 "description": {
                     "value": "Embeds and syntax highlights code from a GitHub URL."
                 },
-                "url": "https://dev.tandav.com/render-github-macro",
+                "url": "https://dev.tandav.com/app/render-github-macro?url={macro.parameter.url}&lines={macro.parameter.lines}&theme={macro.parameter.theme}",
                 "outputType": "block",
                 "bodyType": "none",
                 "icon": {
@@ -112,6 +112,5 @@
                 "url": "/documentation.html"
             }
         ]
-    },
-    "schemaVersion": "1.1.14"
+    }
 }

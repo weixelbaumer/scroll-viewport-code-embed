@@ -258,17 +258,14 @@
                 } else {
                     document.getElementById('lines-error').style.display = 'none';
                 }
-                // Restore saving parameters wrapped in { parameters: ... }
-                // Ensure all defined parameters are included, even if empty/default
+                // Pass parameters directly on the root object
                 const macroData = {
-                    parameters: {
-                        url: { value: url },
-                        lines: { value: lines }, // Pass empty string if user left blank
-                        theme: { value: theme || 'github-light' } // Pass selected or default
-                    }
+                    url: url,
+                    lines: lines, // Pass empty string if user left blank
+                    theme: theme || 'github-light' // Pass selected or default
                 };
                 
-                log(`Saving full macro data with parameters key: ${JSON.stringify(macroData)}`);
+                log(`Saving macro data directly: ${JSON.stringify(macroData)}`);
                 AP.confluence.saveMacro(macroData);
                 AP.confluence.closeMacroEditor(); // Close editor once
             } catch (err) {

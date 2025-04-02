@@ -30,6 +30,12 @@ const NGROK_URL = process.env.NGROK_URL || '';
 // Initialize express
 const app = express();
 
+// --- Add Body Parsers EARLY ---
+// Ensure request bodies are parsed before ACE might need them
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+// ---------------------------
+
 // Ensure database directory exists
 const dbDir = path.join(__dirname, 'db');
 if (!fs.existsSync(dbDir)) {
@@ -40,32 +46,31 @@ if (!fs.existsSync(dbDir)) {
 const dbPath = path.join(dbDir, 'database.sqlite');
 console.log("Database will be created at:", dbPath);
 
-// Delete any existing database to start clean
-try {
-  if (fs.existsSync(dbPath)) {
+// --- Development Only: Delete existing DB for clean start ---
+if (process.env.NODE_ENV !== 'production' && fs.existsSync(dbPath)) {
+  console.log("DEVELOPMENT: Deleting existing database file:", dbPath);
+  try {
     fs.unlinkSync(dbPath);
-    console.log("Existing database file deleted");
+    console.log("DEVELOPMENT: Database file deleted successfully.");
+  } catch (err) {
+    console.error("DEVELOPMENT: Error deleting database file:", err);
   }
-  // Create empty database file
-  fs.writeFileSync(dbPath, '');
-  console.log("Empty database file created");
-} catch (err) {
-  console.error("Error managing database file:", err);
 }
+// ---------------------------------------------------------
 
+// Ensure the 'db' directory exists, but let ACE handle the file content.
 const config = {
   config: {
     development: {
       port: 3000,
       localBaseUrl: process.env.AC_LOCAL_BASE_URL || 'https://dev.tandav.com',
       store: {
-        adapter: 'sequelize',
-        dialect: 'sqlite',
-        storage: dbPath,
-        username: '',
-        password: '',
-        database: 'github-fetcher',
-        logging: false
+        adapter: 'sequelize', // Use Sequelize adapter
+        dialect: 'sqlite',    // Use SQLite dialect
+        storage: dbPath,      // Path to the SQLite file
+        logging: false,       // Disable Sequelize logging again
+        database: 'ace_db'    // A simple database name (less relevant for SQLite)
+        // Removed username/password as they aren't needed for SQLite
       },
       watch: false
     },
@@ -88,82 +93,103 @@ const config = {
 };
 
 console.log("ACE configuration:", JSON.stringify(config, null, 2));
-const addon = ace(app, config);
+console.log("Attempting ACE initialization...");
+let addon; // Declare addon variable outside try block
+try {
+  addon = ace(app, config);
+  console.log("ACE initialization completed successfully.");
+
+  // *** Add ACE Event Listeners for Debugging ***
+  addon.on('host_settings_saved', (clientKey, data) => {
+    console.log(`[ACE EVENT] host_settings_saved triggered for clientKey: ${clientKey}`);
+    console.log(`[ACE EVENT] Saved data (partial):`, { baseUrl: data.baseUrl, sharedSecretExists: !!data.sharedSecret });
+    // Avoid logging the actual shared secret
+  });
+
+  addon.on('host_settings_removed', (clientKey) => {
+    console.log(`[ACE EVENT] host_settings_removed triggered for clientKey: ${clientKey}`);
+  });
+
+  // Although ACE doesn't have a generic error event for saving,
+  // we can log any potential unhandled rejections which might relate.
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[PROCESS EVENT] Unhandled Rejection at:', promise, 'reason:', reason);
+  });
+  // *** End ACE Event Listeners ***
+
+} catch (err) {
+  console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+  console.error("FATAL ERROR DURING ACE INITIALIZATION:");
+  console.error(err);
+  console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+  // Optionally exit if ACE fails to initialize
+  // process.exit(1);
+}
+
+// Check if addon was initialized before proceeding
+if (!addon) {
+  console.error("ACE addon object failed to initialize. Cannot continue.");
+  process.exit(1); // Exit if addon is not valid
+}
+
+// --- Serve Static Files EARLY ---
+app.use(express.static(path.join(__dirname, 'public')));
+// -----------------------------
+
+// NOTE: Removing global authenticateInstall again.
 
 // Log the specific store config being used
 console.log(`ACE Initialized. Active environment: [${addon.config.environment()}]`);
 console.log(`Store configuration being used:`, JSON.stringify(addon.config.store(), null, 2));
 
-// Middleware like body-parser, static files, etc., should come after ACE init
-// but before your specific routes.
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Enable CORS
-app.use(cors());
-
-// Make sure body-parser middleware is used BEFORE your routes
-app.use(bodyParser.json()); // For parsing application/json
-app.use(bodyParser.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
-
-// Add ngrok-skip-browser-warning header for all responses
-app.use((req, res, next) => {
-  // Set proper headers to bypass ngrok warning
-  res.setHeader('ngrok-skip-browser-warning', 'true');
-  res.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36');
-  
-  // Set other headers that might help bypass the warning
-  res.setHeader('X-Forwarded-For', '127.0.0.1');
-  res.setHeader('X-Requested-With', 'XMLHttpRequest');
-  
-  // Add Access-Control-Allow-Origin header explicitly
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, ngrok-skip-browser-warning');
-  
-  next();
-});
-
-// Middleware to ensure correct content type for JS files
-app.use((req, res, next) => {
-  const path = req.path;
-  if (path.endsWith('.js')) {
-    // Store the original send method
-    const originalSend = res.send;
-    
-    // Override the send method
-    res.send = function(body) {
-      // Set proper JavaScript MIME type
-      if (!res.get('Content-Type')) {
-        res.set('Content-Type', 'application/javascript; charset=utf-8');
-      }
-      res.set('X-Content-Type-Options', 'nosniff');
-      
-      // Call the original send method
-      return originalSend.call(this, body);
-    };
+// --- Define Lifecycle Routes Explicitly ---
+// Apply install auth middleware directly to the lifecycle routes
+app.post('/installed', addon.authenticateInstall(), (req, res) => {
+  // Log context provided by the middleware AFTER it runs
+  console.log('[LIFECYCLE /installed] Middleware finished.');
+  if (req.context && req.context.clientKey) {
+    console.log(`[LIFECYCLE /installed] Context OK. clientKey: ${req.context.clientKey}`);
+    // Assuming middleware saved details, just send success
+    res.sendStatus(200);
+  } else {
+    console.error('[LIFECYCLE /installed] ERROR: req.context or clientKey missing after middleware!');
+    res.status(500).send('Installation context not found after authentication.');
   }
-  next();
 });
 
-// Set CORS headers for all routes - more comprehensive version
-app.use((req, res, next) => {
-  // Essential CORS headers
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, ngrok-skip-browser-warning, X-PINGOTHER');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.header('Cross-Origin-Embedder-Policy', 'credentialless');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+app.post('/uninstalled', addon.authenticateInstall(), (req, res) => {
+  // Log context provided by the middleware AFTER it runs
+  console.log('[LIFECYCLE /uninstalled] Middleware finished.');
+   if (req.context && req.context.clientKey) {
+    console.log(`[LIFECYCLE /uninstalled] Context OK. clientKey: ${req.context.clientKey}`);
+    // Assuming middleware removed details, just send success
+    res.sendStatus(200);
+  } else {
+    // This might be expected if details were already removed
+    console.warn('[LIFECYCLE /uninstalled] req.context or clientKey missing after middleware (might be normal if already uninstalled).');
+    res.sendStatus(200); // Send success anyway for uninstall
   }
-  
-  next();
 });
+// -----------------------------------------
+// --- Simplified Middleware Structure ---
+// Temporarily removed general CORS and header middleware to isolate ACE issues.
+// We will add them back carefully if needed after core ACE works.
+
+// NOTE: Static files middleware moved earlier
+
+// Removed duplicate global bodyParser lines.
+// --- Mount Application Routes ---
+const macroRoutes = require('./src/routes/macro')(addon); // Pass addon instance to routes
+// NOTE: JWT authentication is now handled *inside* the macroRoutes router definition
+// Removed: app.use('/app', addon.authenticate());
+// Mount the macro routes under /app AFTER authentication for this path
+app.use('/app', macroRoutes);
+// --------------------------------------------------
+
+// NOTE: Explicit lifecycle routes removed; ACE will handle them implicitly.
+
+// --- Mount Other Non-ACE Routes ---
+// These routes do NOT require ACE authentication
 
 // Add a special dummy trigger image to help with CORB workarounds
 app.get('/dummy-trigger.png', (req, res) => {
@@ -1179,195 +1205,14 @@ app.get('/raw', async (req, res) => {
   }
 });
 
-// *** Add the route handler for the lifecycle callback ***
-// This endpoint receives the installation data from Confluence.
-// ACE automatically handles saving the client key, shared secret, etc.
-// You only need custom logic here if you want to perform actions AFTER installation.
-app.post('/installed', (req, res) => {
-  console.log("=== INSTALLATION REQUEST RECEIVED ===");
-  console.log("Client Key:", req.body.clientKey);
-  console.log("Base URL:", req.body.baseUrl);
-  
-  // Store the installation details in a global variable for simplicity
-  global.installations = global.installations || {};
-  global.installations[req.body.clientKey] = {
-    clientKey: req.body.clientKey,
-    baseUrl: req.body.baseUrl,
-    sharedSecret: req.body.sharedSecret
-  };
-  
-  console.log("Installation stored in memory:", global.installations[req.body.clientKey] ? "YES" : "NO");
-  console.log("App installed successfully!");
-  res.sendStatus(200);
-});
+// Removed custom /installed handler.
+// ACE handles the /installed lifecycle hook automatically,
+// saving credentials to the configured database store (SQLite).
 
-// Simple authentication bypass middleware for testing
-function bypassAuthentication(req, res, next) {
-  // For testing purposes, bypass authentication
-  console.log("BYPASSING AUTHENTICATION FOR TESTING");
-  next();
-}
+// Removed bypassAuthentication function as addon.authenticate() is now used on the route
 
-// ROUTE HANDLER FOR DYNAMIC MACRO RENDERING
-app.all('/render-github-macro', bypassAuthentication, async (req, res) => {
-  console.log(`-----------------------------------------------------`);
-  console.log(`[${new Date().toISOString()}] Incoming /render-github-macro request`);
-  console.log(`Method: ${req.method}`);
-  console.log(`URL: ${req.originalUrl}`);
-  console.log(`Query Params:`, JSON.stringify(req.query, null, 2)); // Log full query params
-  console.log(`Body Params:`, JSON.stringify(req.body, null, 2)); // Log full body params
-  console.log(`Headers:`, JSON.stringify(req.headers, null, 2)); // Log headers for debugging
-  console.log(`-----------------------------------------------------`);
-
-  try {
-    // Extract parameters from query - handle ALL possible structures
-    let githubUrl, lineRange, theme;
-    
-    // Check for parameters in different possible locations and formats
-    if (req.query.parameters && req.query.parameters.url && req.query.parameters.url.value) {
-      // Nested structure from Confluence
-      githubUrl = req.query.parameters.url.value;
-      lineRange = req.query.parameters.lines ? req.query.parameters.lines.value : '';
-      theme = req.query.parameters.theme ? req.query.parameters.theme.value : 'github-light';
-      console.log('Extracted from nested parameters structure');
-    } 
-    else if (req.query.url) {
-      // Direct parameters in query
-      githubUrl = req.query.url;
-      lineRange = req.query.lines || '';
-      theme = req.query.theme || 'github-light';
-      console.log('Extracted from direct query parameters');
-    }
-    else if (req.body && req.body.parameters && req.body.parameters.url) {
-      // Nested in body from Confluence
-      githubUrl = req.body.parameters.url.value;
-      lineRange = req.body.parameters.lines ? req.body.parameters.lines.value : '';
-      theme = req.body.parameters.theme ? req.body.parameters.theme.value : 'github-light';
-      console.log('Extracted from body nested parameters');
-    }
-    else if (req.body && req.body.url) {
-      // Direct in body
-      githubUrl = req.body.url;
-      lineRange = req.body.lines || '';
-      theme = req.body.theme || 'github-light';
-      console.log('Extracted from direct body parameters');
-    }
-    else {
-      // Try to find parameters anywhere in the request
-      console.log('Searching for parameters in full request...');
-      console.log('Full request query:', req.query);
-      console.log('Full request body:', req.body);
-      
-      // Last resort - search all properties
-      const findParam = (obj, key) => {
-        if (!obj || typeof obj !== 'object') return undefined;
-        
-        if (obj[key] !== undefined) return obj[key];
-        
-        for (const prop in obj) {
-          const result = findParam(obj[prop], key);
-          if (result !== undefined) return result;
-        }
-        
-        return undefined;
-      };
-      
-      githubUrl = findParam(req.query, 'url') || findParam(req.body, 'url');
-      lineRange = findParam(req.query, 'lines') || findParam(req.body, 'lines') || '';
-      theme = findParam(req.query, 'theme') || findParam(req.body, 'theme') || 'github-light';
-      
-      if (githubUrl) {
-        console.log('Found parameters using deep search');
-      }
-    }
-
-    console.log('Final Extracted Parameters:', {
-      url: githubUrl,
-      lines: lineRange,
-      theme: theme
-    });
-
-    // Validate required parameters
-    if (!githubUrl) {
-      console.error('Missing GitHub URL parameter');
-      return res.status(400).json({
-        error: 'Missing GitHub URL parameter',
-        details: 'The GitHub URL parameter is required.',
-        receivedQuery: req.query // Send back the query for debugging
-      });
-    }
-
-    // Check if running in Scroll Viewport context
-    const isScrollViewport = req.headers['x-scroll-viewport'] === 'true';
-    
-    try {
-      // Transform and validate the GitHub URL
-      // Pass only the URL, lines/theme are handled separately now
-      const { url: processedUrl, extractedLines, extractedTheme } = validateAndTransformGitHubUrl(githubUrl);
-      
-      // Use explicit parameters first, fall back to extracted values only if needed (though should be covered by query params)
-      const finalLines = lineRange || extractedLines;
-      const finalTheme = theme || extractedTheme || 'github';
-
-      // Fetch the content
-      const response = await axios.get(processedUrl, {
-        headers: {
-          'User-Agent': 'GitHub-Code-Renderer',
-          'Accept': 'text/plain'
-        }
-      });
-
-      let code = response.data;
-      
-      // Extract specific lines if requested
-      if (finalLines) {
-        code = extractLines(code, finalLines);
-      }
-
-      // Determine language from file extension
-      const language = detectLanguage(processedUrl.split('/').pop().split('.').pop());
-      
-      // Get theme styles
-      const themeStyles = getThemeStyles(finalTheme);
-
-      // Return appropriate response based on context
-      if (isScrollViewport) {
-        const uniqueId = `gh-code-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        res.send(`
-          <div id="${uniqueId}" 
-               class="github-code-block" 
-               data-url="${githubUrl}"
-               data-lines="${finalLines || ''}"
-               data-theme="${finalTheme}">
-            Loading GitHub code...
-          </div>
-        `);
-      } else {
-        // Return the rendered code block
-        res.send(`
-          <div class="github-code-block" data-theme="${finalTheme}">
-            <style>${themeStyles}</style>
-            <pre><code class="language-${language}">${escapeHtml(code)}</code></pre>
-          </div>
-        `);
-      }
-    } catch (error) {
-      console.error('Error processing GitHub content:', error);
-      res.status(500).json({
-        error: 'Error processing GitHub content',
-        message: error.message,
-        details: error.stack
-      });
-    }
-  } catch (error) {
-    console.error('General error in macro handler:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message: error.message,
-      details: error.stack
-    });
-  }
-});
+// Removed conflicting app.all('/render-github-macro', ...) handler.
+// Routes are now handled by the router defined in src/routes/macro.js
 
 // Helper function escapeAttr (ensure it's defined)
 function escapeAttr(str) {

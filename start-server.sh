@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# Kill any existing server processes
-pkill -f "node server.js" || true
+# Kill ALL existing Node processes forcefully
+echo "Attempting to kill all running Node processes..."
+killall node || echo "No Node processes were running or killall failed."
+sleep 1 # Give processes a moment to terminate
 
 # Set environment variables
 export NODE_ENV=development
@@ -10,7 +12,8 @@ export FORCE_DB_FILE=true
 
 # Start the server
 echo "Starting GitHub Code Block server..."
-node server.js &
+# Use nodemon for automatic restarts on file changes
+nodemon server.js &
 SERVER_PID=$!
 
 # Wait for server to start

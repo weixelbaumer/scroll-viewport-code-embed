@@ -1,6 +1,8 @@
 const express = require('express');
-const router = express.Router();
-const fetch = require('node-fetch');
+
+module.exports = function(addon) { // Export a function that accepts addon
+  const router = express.Router();
+// Removed: const fetch = require('node-fetch'); - Will use dynamic import() instead
 
 // Supported themes
 const THEMES = {
@@ -13,9 +15,15 @@ const THEMES = {
     ATOM_DARK: 'atom-one-dark'
 };
 
-router.post('/macro', async (req, res) => {
-    const { url, lineRange, theme = THEMES.GITHUB_LIGHT } = req.query;
-    
+  // Use addon.authenticate() for standard JWT verification for installed apps
+  router.get('/render-github-macro', addon.authenticate(), async (req, res) => {
+    console.log('[DEBUG] Full Request Object:', JSON.stringify(req.query, null, 2)); // Log query specifically
+    console.log('[DEBUG] Request Headers:', JSON.stringify(req.headers, null, 2)); // Log headers
+    // console.log('[DEBUG] Full Request Object (might be large):', JSON.stringify(req, null, 2)); // Uncomment if needed, but might be too verbose
+
+    const { url, lines, theme = THEMES.GITHUB_LIGHT } = req.query; // Corrected 'lineRange' to 'lines' to match query param
+    console.log(`[DEBUG] Extracted Params - URL: ${url}, Lines: ${lines}, Theme: ${theme}`);
+
     if (!url) {
         return res.status(400).json({
             error: 'Missing GitHub URL parameter',
@@ -65,7 +73,8 @@ function normalizeGitHubUrl(url) {
     return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
 }
 
-async function fetchGitHubContent(url, lineRange) {
+async function fetchGitHubContent(url, lines) { // Renamed lineRange to lines here too for consistency
+    const fetch = (await import('node-fetch')).default; // Dynamically import node-fetch
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -74,13 +83,13 @@ async function fetchGitHubContent(url, lineRange) {
 
     let code = await response.text();
 
-    // Handle line range if specified
-    if (lineRange) {
-        const lines = code.split('\n');
+    // Handle lines if specified
+    if (lines) { // Use the 'lines' variable
+        const codeLines = code.split('\n'); // Use a different variable name to avoid shadowing
         const [start, end] = lineRange.split('-').map(num => parseInt(num));
         
         if (!isNaN(start) && !isNaN(end) && start > 0 && end >= start) {
-            code = lines.slice(start - 1, end).join('\n');
+            code = codeLines.slice(start - 1, end).join('\n');
         }
     }
 
@@ -188,4 +197,5 @@ function getThemeColor(theme) {
     return colors[theme] || colors['github-light'];
 }
 
-module.exports = router; 
+  return router; // Return the configured router
+};
