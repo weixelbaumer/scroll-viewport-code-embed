@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>GitHub Code Placeholder</title>
+    <!-- We don't need all.js here as this is rendered statically by Confluence -->
+</head>
+<body>
+    <!--
+        Confluence will substitute parameters into this placeholder.
+        The client-side theme-script.js will find this div and replace it.
+        Parameters are accessed via {macro.parameter.<identifier>.value}
+        We need to ensure the editor saves the nested format for this to work.
+    -->
+    <div class="github-code-embed-placeholder"
+         id="gh-placeholder-{macro.hash}" <!-- Use macro hash for a unique-ish ID -->
+         data-github-url="{macro.parameter.url.value}"
+         data-lines="{macro.parameter.lines.value}"
+         data-theme="{macro.parameter.theme.value}"
+         style="border:1px dashed #ccc; padding:10px; background:#f9f9f9; color:#777; min-height: 50px;">
+        Loading GitHub Code Block... (URL: {macro.parameter.url.value})
+    </div>
+
+    <!--
+        Optional: Include the theme-script directly here if it's not guaranteed
+        to be loaded globally by the Confluence theme. This ensures the placeholder
+        is processed even if the theme doesn't include the script.
+        However, this might cause the script to run multiple times if it *is*
+        also loaded globally. Best practice is usually theme inclusion.
+    -->
+    <!-- <script src="/theme-script.js"></script> -->
+</body>
+</html>

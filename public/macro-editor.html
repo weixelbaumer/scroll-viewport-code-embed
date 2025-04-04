@@ -258,11 +258,13 @@
                 } else {
                     document.getElementById('lines-error').style.display = 'none';
                 }
-                // Pass parameters directly on the root object
+                // Use NESTED format required for static macro parameter substitution
                 const macroData = {
-                    url: url,
-                    lines: lines, // Pass empty string if user left blank
-                    theme: theme || 'github-light' // Pass selected or default
+                    parameters: {
+                        url: { value: url },
+                        lines: { value: lines }, // Pass empty string if user left blank
+                        theme: { value: theme || 'github-light' } // Pass selected or default
+                    }
                 };
                 
                 log(`Saving macro data directly: ${JSON.stringify(macroData)}`);

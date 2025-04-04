@@ -281,6 +281,79 @@
         // Remove processing attribute so it might retry on mutation? No, keep it processed.
     }
 
+    // Function to process div placeholders (NEW)
+    function fetchAndReplaceDivPlaceholders() {
+        console.log("GitHub Theme Script: Searching for div placeholders (class: github-code-embed-placeholder)...");
+        const placeholders = document.querySelectorAll('div.github-code-embed-placeholder');
+        console.log(`GitHub Theme Script: Found ${placeholders.length} div placeholders to process.`);
+
+        placeholders.forEach(placeholder => {
+            // Prevent reprocessing
+            if (placeholder.hasAttribute('data-github-processing')) return;
+            placeholder.setAttribute('data-github-processing', 'true');
+
+            const url = placeholder.getAttribute('data-github-url'); // Use data-github-url
+            const lines = placeholder.getAttribute('data-lines');
+            const theme = placeholder.getAttribute('data-theme');
+            const placeholderId = placeholder.id;
+
+            console.log(`GitHub Theme Script: Processing div placeholder with ID ${placeholderId}`);
+            console.log(`- URL: ${url}`);
+            console.log(`- Lines: ${lines}`);
+            console.log(`- Theme: ${theme}`);
+
+            if (!url) {
+                console.error(`GitHub Theme Script: Div placeholder ${placeholderId} is missing URL.`);
+                placeholder.textContent = `[GitHub Code Error: URL missing in placeholder]`;
+                placeholder.style.color = 'red';
+                return;
+            }
+
+            // *** IMPORTANT: Construct API URL to fetch FINAL HTML ***
+            // Assuming an endpoint like '/html' exists that returns pre-rendered code
+            // DO NOT call '/render-github-macro' again, it will loop!
+            const apiUrl = new URL(apiBaseUrl + "/html"); // <-- ADJUST if endpoint is different
+            apiUrl.searchParams.append('url', url);
+            if (lines) {
+                apiUrl.searchParams.append('lines', lines);
+            }
+            apiUrl.searchParams.append('theme', theme);
+
+            console.log("GitHub Theme Script: Fetching final HTML from", apiUrl.toString());
+
+            fetch(apiUrl.toString())
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
+                        });
+                    }
+                    return response.text(); // Expecting raw HTML
+                })
+                .then(html => {
+                    // Replace the placeholder div with the fetched HTML
+                    const container = document.createElement('div');
+                    container.setAttribute('data-github-fetched', 'true'); // Mark as processed
+                    container.innerHTML = html;
+
+                    // Replace placeholder with the container's content
+                    if (placeholder.parentNode) {
+                         while (container.firstChild) {
+                            placeholder.parentNode.insertBefore(container.firstChild, placeholder);
+                        }
+                        placeholder.parentNode.removeChild(placeholder);
+                    } else {
+                         console.warn(`GitHub Theme Script: Div placeholder ${placeholderId} has no parent during replacement.`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`GitHub Theme Script: Error fetching code for div ${placeholderId}:`, error);
+                    placeholder.textContent = `[GitHub Code Error: ${error.message}]`;
+                    placeholder.style.color = 'red';
+                });
+        });
+    }
+
     // --- Initialization ---
 
     // 1. Initial scan and wrapping of markers
@@ -310,12 +383,21 @@
         fetchAndReplaceMarkers();
         
         try {
-            // Process anchor placeholders (new code)
+            // Process anchor placeholders
             console.log("GitHub Theme Script: About to search for anchor placeholders...");
             fetchAndReplaceAnchorPlaceholders();
             console.log("GitHub Theme Script: Completed anchor placeholder search");
         } catch (e) {
             console.error("GitHub Theme Script: Error while processing anchor placeholders:", e);
+        }
+
+        try {
+            // Process div placeholders (NEW)
+            console.log("GitHub Theme Script: About to search for div placeholders...");
+            fetchAndReplaceDivPlaceholders();
+            console.log("GitHub Theme Script: Completed div placeholder search");
+        } catch (e) {
+            console.error("GitHub Theme Script: Error while processing div placeholders:", e);
         }
     }
 
@@ -324,6 +406,7 @@
         console.log("GitHub Theme Script: Running standalone anchor processing...");
         try {
             fetchAndReplaceAnchorPlaceholders();
+            fetchAndReplaceDivPlaceholders(); // Also process divs here
         } catch (e) {
             console.error("GitHub Theme Script: Error in standalone anchor processing:", e);
         }
@@ -348,6 +431,7 @@
     const observer = new MutationObserver((mutationsList) => {
         let needsTextProcessing = false;
         let anchorsAdded = false;
+        let divsAdded = false; // Track added divs (NEW)
         
         for (const mutation of mutationsList) {
             if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
@@ -366,15 +450,26 @@
                             anchorsAdded = true;
                             console.log("GitHub Theme Script: MutationObserver detected new anchor placeholder");
                         }
-                        // Or if it contains text markers or anchor placeholders
+                        // Check if it's a div placeholder (NEW)
+                        else if (newNode.tagName === 'DIV' && newNode.classList.contains('github-code-embed-placeholder')) {
+                            divsAdded = true;
+                            console.log("GitHub Theme Script: MutationObserver detected new div placeholder");
+                        }
+                        // Or if it contains text markers or placeholders
                         else {
                             if (newNode.textContent && newNode.textContent.includes(MARKER_PREFIX)) {
                                 needsTextProcessing = true;
                                 processNode(newNode);
                             }
-                            if (newNode.querySelector && newNode.querySelector('a.gh-code-anchor-placeholder')) {
-                                anchorsAdded = true;
-                                console.log("GitHub Theme Script: MutationObserver detected new child anchor placeholder");
+                            if (newNode.querySelector) {
+                                if (newNode.querySelector('a.gh-code-anchor-placeholder')) {
+                                    anchorsAdded = true;
+                                    console.log("GitHub Theme Script: MutationObserver detected new child anchor placeholder");
+                                }
+                                if (newNode.querySelector('div.github-code-embed-placeholder')) { // Check for child divs (NEW)
+                                    divsAdded = true;
+                                    console.log("GitHub Theme Script: MutationObserver detected new child div placeholder");
+                                }
                             }
                         }
                     }
@@ -391,6 +486,10 @@
             console.log("GitHub Theme Script: Detected new anchor placeholders, processing...");
             fetchAndReplaceAnchorPlaceholders();
         }
+        if (divsAdded) { // Process added divs (NEW)
+             console.log("GitHub Theme Script: Detected new div placeholders, processing...");
+            fetchAndReplaceDivPlaceholders();
+        }
     });
 
     // Start observing the body for changes
@@ -402,15 +501,19 @@
     
     // Set up a periodic rescan as fallback (every 2 seconds)
     const rescanInterval = setInterval(() => {
-        console.log("GitHub Theme Script: Performing periodic rescan...");
+        // console.log("GitHub Theme Script: Performing periodic rescan..."); // Reduce noise
         fetchAndReplaceAnchorPlaceholders();
+        fetchAndReplaceDivPlaceholders(); // Also rescan divs
     }, 2000);
     
     // After 30 seconds, reduce scan frequency to save resources
     setTimeout(() => {
         console.log("GitHub Theme Script: Reducing scan frequency");
         clearInterval(rescanInterval);
-        setInterval(fetchAndReplaceAnchorPlaceholders, 10000); // Every 10 seconds
+        setInterval(() => {
+            fetchAndReplaceAnchorPlaceholders();
+            fetchAndReplaceDivPlaceholders(); // Also rescan divs
+        }, 10000); // Every 10 seconds
     }, 30000);
 
     console.log("GitHub Theme Script: Initialization complete");

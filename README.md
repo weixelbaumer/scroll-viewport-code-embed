@@ -1,61 +1,71 @@
 # GitHub Code Block Renderer for Confluence
 
-A Confluence app that renders code blocks from GitHub repositories with syntax highlighting.
+A Confluence Connect app that renders code blocks from GitHub repositories with syntax highlighting. Built using Node.js and Atlassian Connect Express (ACE).
 
 ## Features
 
-- Fetch and display code from GitHub repositories
-- Support for line range selections (e.g., 5-10, 15,20,25)
-- Syntax highlighting for various programming languages
-- Special handling for Scroll Viewport with anchor-based placeholders
+- Fetch and display code from GitHub repositories.
+- Support for line range selections (e.g., `5-10`, `15,20,25`).
+- Syntax highlighting for various programming languages using `highlight.js`.
+- Special client-side rendering handling for compatibility with Atlassian Scroll Viewport themes.
 
-## The Scroll Viewport Solution
+## How it Works
 
-To solve issues with rendering code in Scroll Viewport, we've implemented a dual approach:
+- **Standard Rendering:** For regular Confluence pages, the app fetches code server-side and renders it directly within the macro output.
+- **Scroll Viewport Handling:** When the app detects it's running within a Scroll Viewport context, it renders a hidden anchor element containing the GitHub URL, line range, and theme as data attributes. A separate client-side script (`public/theme-script.js`), intended to be included in the Scroll Viewport theme, finds these anchors and makes direct API calls to fetch and render the code in the browser. This bypasses potential server-side rendering limitations within Scroll Viewport.
 
-1. When the app is loaded in a Scroll Viewport context (detected via HTTP header), it renders a hidden anchor element with the GitHub URL, line range, and theme stored as data attributes.
+## Development Setup
 
-2. A client-side script (`theme-script.js`) then detects these anchors and makes direct API calls to fetch and render the code, bypassing the Scroll Viewport limitations.
+1.  **Prerequisites:**
+    *   Node.js (>=14.0.0, see `package.json`) and npm installed.
+    *   A tunneling service (like ngrok or Cloudflare Tunnel) to expose your local server to the public internet via HTTPS. Confluence Cloud needs to reach your server.
 
-## Installation
+2.  **Clone:** Clone this repository.
+    ```bash
+    git clone <repository-url>
+    cd scroll-viewport-code-embed
+    ```
 
-1. Clone this repository
-2. Install dependencies with `npm install`
-3. Run the server with `./start-simple-server.sh`
+3.  **Install Dependencies:**
+    ```bash
+    npm install
+    ```
 
-## Configuration
+4.  **Configure Tunnel & Base URL:**
+    *   Ensure your tunnel service provides a stable HTTPS URL (e.g., `https://your-tunnel-url.com`).
+    *   Update the `baseUrl` in `atlassian-connect.json` to match your tunnel URL.
+    *   Set the `AC_LOCAL_BASE_URL` environment variable to your tunnel URL when running the server (the `npm start` script does this).
 
-The app uses a Cloudflare tunnel to expose the local server to the internet.
-The base URL is configured to `https://dev.tandav.com` in the `atlassian-connect.json` file.
+5.  **Run the Server:**
+    *   **Recommended for ACE development:** Uses `nodemon` for auto-restarts. Ensure your tunnel URL is set correctly in `atlassian-connect.json` and potentially as an environment variable if needed.
+        ```bash
+        npm run dev
+        ```
+    *   **Alternative using `npm start`:** This script explicitly sets `NODE_ENV` and `AC_LOCAL_BASE_URL`. Make sure the base URL matches your tunnel.
+        ```bash
+        npm start
+        ```
+    *   The server uses `atlassian-connect-express` with SQLite (`db/database.sqlite`) for storing installation details.
+
+6.  **Install in Confluence:**
+    *   Navigate to your Confluence Cloud instance's "Manage apps" section.
+    *   Enable development mode.
+    *   Upload the app by providing the URL to your running server's descriptor: `https://your-tunnel-url.com/atlassian-connect.json`.
 
 ## Usage
 
-1. Add the app to your Confluence instance
-2. Insert the "GitHub Code Block" macro in your page
-3. Enter a GitHub URL and optional line range
-4. The macro will render the code with syntax highlighting
+1.  Once the app is installed, navigate to a Confluence page.
+2.  Insert the "GitHub Code Block" macro using the editor.
+3.  Enter the full GitHub file URL (e.g., `https://github.com/user/repo/blob/main/file.js`) and optional line ranges/theme in the macro editor.
+4.  Save the page. The macro will render the code with syntax highlighting.
 
 ## Troubleshooting
 
-If you're having issues:
-
-1. Check the server logs in `simple-server.log`
-2. Verify the Cloudflare tunnel is running
-3. Ensure the app is properly installed in your Confluence instance
-
-## Simplified Server
-
-We've implemented a simplified server that avoids using atlassian-connect-express to eliminate database-related issues. The server:
-
-1. Processes both traditional and Scroll Viewport requests
-2. Generates hidden anchors with unique IDs for Scroll Viewport
-3. Logs all requests to a log file for easy debugging
-
-To start the simplified server:
-
-```bash
-./start-simple-server.sh
-```
+-   **Check Server Logs:** Monitor the console output where you ran `npm run dev` or `npm start` for errors, including Sequelize logs (currently enabled).
+-   **Verify Tunnel:** Ensure your tunneling service is running and correctly pointing to your local server (usually `http://localhost:3000`).
+-   **Check Base URL:** Double-check that the `baseUrl` in `atlassian-connect.json` exactly matches your public tunnel HTTPS URL.
+-   **Database:** ACE uses `db/database.sqlite`. If installation fails repeatedly, deleting this file *before* restarting the server and reinstalling the app can sometimes help reset the state (but shouldn't be needed for normal operation).
+-   **Confluence Cache:** Clear your browser cache or use an incognito window if Confluence seems to be showing outdated app information.
 
 ## License
 
@@ -63,4 +73,4 @@ Copyright © 2025 Apryse. All rights reserved.
 
 ## Support
 
-For support, please contact your Confluence administrator or Apryse technical support. 
+For support, please contact your Confluence administrator or Apryse technical support.
