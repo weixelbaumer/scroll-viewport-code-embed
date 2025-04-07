@@ -258,6 +258,15 @@
                 } else {
                     document.getElementById('lines-error').style.display = 'none';
                 }
+
+                // Final check: Ensure URL is not empty before saving
+                if (!url) {
+                    log('ERROR: URL is empty just before saveMacro call.');
+                    showStatus('error', 'GitHub URL cannot be empty.');
+                    document.getElementById('url-error').style.display = 'block';
+                    return;
+                }
+
                 // Use NESTED format required for static macro parameter substitution
                 const macroData = {
                     parameters: {

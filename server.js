@@ -133,55 +133,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 console.log(`ACE Initialized. Active environment: [${addon.config.environment()}]`);
 console.log(`Store configuration being used:`, JSON.stringify(addon.config.store(), null, 2));
 
-// --- Define Lifecycle Routes Explicitly ---
-// Apply install auth middleware directly to the lifecycle routes
-app.post('/installed', addon.authenticateInstall(), async (req, res) => {
-  console.log('[LIFECYCLE /installed] Middleware finished.');
-  if (req.context && req.context.clientKey && req.body) {
-    const clientKey = req.context.clientKey;
-    const clientInfo = req.body; // The payload sent by Confluence
-    console.log(`[LIFECYCLE /installed] Context OK. clientKey: ${clientKey}`);
-    console.log(`[LIFECYCLE /installed] Received clientInfo payload:`, JSON.stringify(clientInfo, null, 2));
+// Add authentication middleware for install/uninstall callbacks AFTER static files
+// Using implicit handling by ACE.
+app.use(addon.authenticateInstall());
 
-    // --- Manually save the received clientInfo ---
-    try {
-      console.log(`[LIFECYCLE /installed] Attempting manual save using addon.settings.set...`);
-      await addon.settings.set('clientInfo', clientInfo, clientKey);
-      console.log(`[LIFECYCLE /installed] Manual save completed. Verifying...`);
-
-      // --- Verify the manual save ---
-      const savedSettings = await addon.settings.get('clientInfo', clientKey);
-      if (savedSettings && savedSettings.baseUrl === clientInfo.baseUrl) {
-        console.log(`[LIFECYCLE /installed] VERIFIED: Successfully retrieved clientInfo for ${clientKey} after manual save.`);
-        res.sendStatus(200);
-      } else {
-         console.error(`[LIFECYCLE /installed] VERIFICATION FAILED: addon.settings.get('clientInfo', ${clientKey}) returned invalid data after manual save.`, savedSettings);
-         res.status(500).send('Failed to verify saved installation data after manual save.');
-      }
-    } catch (err) {
-       console.error(`[LIFECYCLE /installed] MANUAL SAVE/VERIFICATION ERROR:`, err);
-       res.status(500).send('Error during manual save or verification of installation data.');
-    }
-    // -----------------------------------------
-
-  } else {
-    console.error('[LIFECYCLE /installed] ERROR: req.context, clientKey, or req.body missing after middleware!');
-    res.status(500).send('Installation context/payload not found after authentication.');
-  }
-});
-
-app.post('/uninstalled', addon.authenticateInstall(), (req, res) => {
-  console.log('[LIFECYCLE /uninstalled] Middleware finished.');
-   if (req.context && req.context.clientKey) {
-    console.log(`[LIFECYCLE /uninstalled] Context OK. clientKey: ${req.context.clientKey}`);
-    // Consider adding manual deletion: await addon.settings.del('clientInfo', clientKey);
-    res.sendStatus(200);
-  } else {
-    console.warn('[LIFECYCLE /uninstalled] req.context or clientKey missing after middleware (might be normal).');
-    res.sendStatus(200);
-  }
-});
-// -----------------------------------------
+// NOTE: Removed explicit lifecycle routes. Using implicit handling via middleware above.
 
 // --- Mount Application Routes (ACE Authenticated) ---
 // This route is likely NOT USED with the static macro approach but kept for reference
@@ -203,10 +159,10 @@ function escapeHtml(unsafe) {
   if (!unsafe) return '';
   return unsafe
      .replace(/&/g, "&amp;")
-     .replace(/</g, "<")
-     .replace(/>/g, ">")
+     .replace(/</g, "&lt;")
+     .replace(/>/g, "&gt;")
      .replace(/"/g, "&quot;") // Corrected replacement for double quote
-     .replace(/'/g, "&#039;");
+     .replace(/'/g, "&#039;"); // HTML entity for single quote
 }
 function validateAndTransformGitHubUrl(url) {
   if (!url) throw new Error('GitHub URL is required');
