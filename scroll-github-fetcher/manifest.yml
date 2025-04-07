@@ -1,0 +1,24 @@
+modules:
+  macro:
+    - key: scroll-github-fetcher-confluence-custom-ui-custom-config-macro
+      resource: main
+      resolver:
+        function: resolver
+      title: scroll-github-fetcher
+      description: Inserts a custom config macro for custom UI
+      config:
+        resource: macro-config
+        viewportSize: max
+        title: Config
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: static/hello-world/build
+  - key: macro-config
+    path: static/config/build
+app:
+  runtime:
+    name: nodejs22.x
+  id: ari:cloud:ecosystem::app/9dee1466-2ab6-46ad-b0db-cb58ed26d097
