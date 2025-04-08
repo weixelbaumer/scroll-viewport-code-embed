@@ -14,8 +14,9 @@
 *   Attempted diagnostic steps within Custom UI app (`scroll-github-fetcher`):
     *   Bypassed React rendering using plain JavaScript (`plain-app.js`).
     *   Attempted rendering static HTML directly.
-    *   The `useState` error persisted even with static HTML, confirming the issue is external to the app's code and likely related to the Forge/Confluence editor environment interaction.
-*   Reverted diagnostic changes, leaving the Custom UI app in the non-functional "Plain JavaScript" state.
+    *   Removed/Re-added `@atlaskit/css-reset`.
+    *   The `useState` error persisted through all diagnostics, confirming the issue is external to the app's code and likely related to the Forge/Confluence editor environment interaction.
+*   Left Custom UI app in the non-functional "Plain JavaScript" state (with CSS reset re-added).
 *   Committed latest changes to `poc/forge-migration` branch.
 
 ## Error Details
