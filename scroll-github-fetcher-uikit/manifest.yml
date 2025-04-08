@@ -1,0 +1,18 @@
+modules:
+  macro:
+    - key: scroll-github-fetcher-uikit-hello-world-macro
+      resource: main
+      render: native
+      resolver:
+        function: resolver
+      title: scroll-github-fetcher-uikit
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: src/frontend/index.jsx
+app:
+  runtime:
+    name: nodejs22.x
+  id: ari:cloud:ecosystem::app/1f27bc9d-1b89-47a1-beb1-45ec30c0c350

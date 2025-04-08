@@ -3,7 +3,7 @@
 // import ReactDOM from 'react-dom';
 // import App from './App'; // Don't need the React App component
 
-import '@atlaskit/css-reset'; // Keep for basic styling consistency
+import '@atlaskit/css-reset'; // RE-ADDED CSS Reset import
 
 // Import the plain JavaScript initialization function
 import initializeApp from './plain-app.js';

@@ -2,26 +2,31 @@
 
 ## Current Task
 
-Debugging a series of errors occurring when the Confluence macro attempts to save or render, particularly related to fetching macro placeholder data.
+**Paused.** Pending external investigation by the user into the Forge Custom UI environmental conflict (`TypeError: Cannot read properties of null (reading 'useState')`).
 
 ## Recent Changes
 
-Unknown. The specific changes leading immediately to this error state were not provided. However, the error trace points to functionality involved in fetching macro attributes and transforming data, potentially related to the Scroll Viewport rendering logic.
+*   Attempted "Ultra-Minimal ACE" approach; failed due to persistent Confluence editor errors.
+*   Pivoted to Atlassian Forge migration (`poc/forge-migration` branch).
+*   Created initial Forge Custom UI app (`scroll-github-fetcher`).
+*   Diagnosed React `useState` errors occurring immediately upon inserting the Custom UI macro in the Confluence editor.
+*   Created diagnostic Forge UI Kit app (`scroll-github-fetcher-uikit`) which inserted successfully, isolating the issue to the Custom UI environment.
+*   Attempted diagnostic steps within Custom UI app (`scroll-github-fetcher`):
+    *   Bypassed React rendering using plain JavaScript (`plain-app.js`).
+    *   Attempted rendering static HTML directly.
+    *   The `useState` error persisted even with static HTML, confirming the issue is external to the app's code and likely related to the Forge/Confluence editor environment interaction.
+*   Reverted diagnostic changes, leaving the Custom UI app in the non-functional "Plain JavaScript" state.
+*   Committed latest changes to `poc/forge-migration` branch.
 
 ## Error Details
 
-1.  **HTTP Error:** `POST https://apryse.atlassian.net/wiki/rest/internal/1.0/macro/placeholder` returns a `400 (Bad Request)`. This happens during the macro saving/rendering process (trace includes `saveCurrentMacro`, `fetchMacroAttributes`).
-2.  **Log Message:** "Error getting placeholder ADF" logged from `fetchMacroAttributes.ts:74`.
-3.  **TypeError:** `Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'parameters')` occurs in `transformers.ts:109`, called from `fetchMacroAttributes.ts:94`. This likely happens because the previous `POST` request failed or returned unexpected data, leading to an undefined object where parameters were expected.
+*   **Primary Blocker:** `TypeError: Cannot read properties of null (reading 'useState')` occurs in the browser console when inserting the Forge **Custom UI** macro (`scroll-github-fetcher`) into the Confluence editor. This happens regardless of the code within the Custom UI iframe (React, plain JS, static HTML), indicating an environmental conflict preventing the iframe's context from initializing correctly.
+*   **Secondary (ACE):** The original ACE app consistently failed with `POST https://apryse.atlassian.net/wiki/rest/internal/1.0/macro/placeholder 400 (Bad Request)` during macro saving/preview.
 
 ## Next Steps
 
-1.  **Investigate the 400 Error:**
-    *   Determine what data is being sent in the `POST` request to `/rest/internal/1.0/macro/placeholder`.
-    *   Understand why the Confluence server is rejecting this request (Bad Request). Check the Confluence server logs if possible.
-    *   Examine the code making this request (likely around `experimentalMacroPlaceholderADF.ts:7` or `fetchJSON.ts:12` based on the stack trace).
-2.  **Analyze the TypeError:**
-    *   Review `fetchMacroAttributes.ts` (lines 74, 94) and `transformers.ts` (line 109).
-    *   Understand how the failure of the placeholder request leads to the `undefined` object being accessed.
-    *   Implement checks or error handling to prevent the TypeError, even if the placeholder request fails.
-3.  **Contextualize:** Determine if this error is specific to the Scroll Viewport rendering path or occurs generally.
+1.  **User Action:** Investigate the Forge Custom UI environmental conflict externally (e.g., check Confluence version, other app conflicts, Atlassian Developer Community/Support). Provide details about the persistent `useState` error.
+2.  **Resume:** Based on the investigation findings, decide whether to:
+    *   Fix the Custom UI conflict and continue developing `scroll-github-fetcher` (preferred for syntax highlighting).
+    *   Switch to the UI Kit app (`scroll-github-fetcher-uikit`) and accept limitations (no easy syntax highlighting).
+    *   Re-evaluate other approaches if necessary.
