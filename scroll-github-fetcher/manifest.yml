@@ -15,7 +15,7 @@ modules:
       handler: index.handler
 resources:
   - key: main
-    path: static/hello-world/build
+    path: static/hello-world/build # Reverted path to expected build directory
   - key: macro-config
     path: static/config/build
 app:

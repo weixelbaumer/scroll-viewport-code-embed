@@ -1,14 +1,24 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import App from './App'; // Assuming App.jsx contains the minimal static component now
+// Remove React imports
+// import React from 'react';
+// import ReactDOM from 'react-dom';
+// import App from './App'; // Don't need the React App component
 
-import '@atlaskit/css-reset';
+import '@atlaskit/css-reset'; // Keep for basic styling consistency
 
-console.log('[Forge Custom UI] index.jsx: Reverting to React rendering.');
+// Import the plain JavaScript initialization function
+import initializeApp from './plain-app.js';
 
+console.log('[Forge Custom UI - Plain JS] index.jsx: Initializing plain JS app.');
+
+// Call the initialization function
+initializeApp();
+
+// Remove React rendering code
+/*
 ReactDOM.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
   document.getElementById('root')
 );
+*/

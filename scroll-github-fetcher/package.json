@@ -22,6 +22,7 @@
     "@forge/bridge": "4.5.0",
     "@forge/react": "11.1.0",
     "@forge/resolver": "1.6.9",
+    "highlight.js": "^11.11.1",
     "react": "^16",
     "react-dom": "^16"
   }
