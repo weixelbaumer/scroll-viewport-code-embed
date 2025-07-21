@@ -98,4 +98,4 @@ Thumbs.db
 .vscode/
 
 # Ignore Cursor specific files
-.cursor/ 
+.cursor/ db/database.sqlite
