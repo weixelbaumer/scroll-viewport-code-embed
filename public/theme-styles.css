@@ -1,6 +1,6 @@
 /**
  * Scroll Viewport Custom Theme CSS
- * Version: 3.1.0 (synchronized with Confluence app)
+ * Version: 3.1.8 (Line Numbers Fix - synchronized with Confluence app)
  * File: theme-styles.css
  * 
  * This stylesheet provides custom styling for the Scroll Viewport theme including:
@@ -56,6 +56,15 @@
 }
 
 /* Code content area */
+.github-code-content {
+    padding: 16px;
+    overflow-x: auto;
+    background-color: #ffffff;
+    line-height: 1.45;
+    font-size: 13px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
 .github-code-block pre {
     margin: 0;
     padding: 16px;
@@ -71,6 +80,35 @@
     font-size: 13px;
     font-family: inherit;
     color: #24292e;
+}
+
+/* Line-by-line styling */
+.code-line {
+    display: flex;
+    align-items: flex-start;
+    min-height: 20px;
+}
+
+.line-number {
+    display: inline-block;
+    width: 50px;
+    padding-right: 16px;
+    text-align: right;
+    color: #656d76;
+    font-size: 12px;
+    line-height: 20px;
+    user-select: none;
+    flex-shrink: 0;
+    border-right: 1px solid #d0d7de;
+    margin-right: 16px;
+}
+
+.line-content {
+    flex: 1;
+    min-width: 0;
+    white-space: pre;
+    color: #24292e;
+    line-height: 20px;
 }
 
 /* Loading state */
@@ -110,11 +148,24 @@
     color: #f0f6fc;
 }
 
+.github-code-block[data-theme="github-dark"] .github-code-content {
+    background-color: #0d1117;
+}
+
 .github-code-block[data-theme="github-dark"] pre {
     background-color: #0d1117;
 }
 
 .github-code-block[data-theme="github-dark"] code {
+    color: #c9d1d9;
+}
+
+.github-code-block[data-theme="github-dark"] .line-number {
+    color: #6e7681;
+    border-right-color: #30363d;
+}
+
+.github-code-block[data-theme="github-dark"] .line-content {
     color: #c9d1d9;
 }
 

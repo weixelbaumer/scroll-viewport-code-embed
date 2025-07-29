@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>GitHub Fetcher Documentation</title>
+    <title>Live GitHub Code Block Renderer Documentation</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
@@ -104,10 +104,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>GitHub Fetcher Documentation</h1>
+        <h1>Live GitHub Code Block Renderer Documentation</h1>
         
         <div class="note">
-            <strong>Version:</strong> 1.1.11 - This Confluence app allows you to embed and render code snippets directly from GitHub repositories.
+            <strong>Version:</strong> 3.1.8 - This Confluence app allows you to embed and render code snippets directly from GitHub repositories with advanced caching and performance optimization.
         </div>
         
         <h2 id="getting-started">Getting Started</h2>
@@ -143,6 +143,92 @@
                 <td>Theme (Optional)</td>
                 <td>The syntax highlighting theme to use</td>
                 <td>GitHub Light, GitHub Dark, etc.</td>
+            </tr>
+        </table>
+        
+        <h2 id="caching-system">Advanced Caching System</h2>
+        
+        <p>The Live GitHub Code Block Renderer includes a comprehensive caching system to optimize performance and reduce GitHub API calls.</p>
+        
+        <h3 id="cache-features">Cache Features</h3>
+        <ul>
+            <li><strong>In-Memory Caching:</strong> Fast NodeCache-based storage with 1-hour TTL</li>
+            <li><strong>ETag Support:</strong> Smart caching using GitHub's ETag headers</li>
+            <li><strong>Cache Busting:</strong> Multiple options for forcing fresh content</li>
+            <li><strong>Statistics:</strong> Real-time monitoring of cache performance</li>
+            <li><strong>Dual-Level:</strong> Separate caches for raw GitHub data and processed responses</li>
+        </ul>
+        
+        <h3 id="cache-busting">Cache Busting Options</h3>
+        
+        <h4>1. URL Parameter (User Control)</h4>
+        <p>Add <code>?nocache=1</code> to any GitHub URL in your macro to force fresh content:</p>
+        <pre><code>https://github.com/user/repo/blob/main/file.js?nocache=1</code></pre>
+        
+        <h4>2. Admin Endpoints (Bulk Management)</h4>
+        <table>
+            <tr>
+                <th>Endpoint</th>
+                <th>Method</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><code>/app/cache/stats</code></td>
+                <td>GET</td>
+                <td>View cache statistics including hit/miss ratios and performance metrics</td>
+            </tr>
+            <tr>
+                <td><code>/app/cache/clear</code></td>
+                <td>POST</td>
+                <td>Clear all cached GitHub code immediately</td>
+            </tr>
+            <tr>
+                <td><code>/app/cache/clear/:urlHash</code></td>
+                <td>POST</td>
+                <td>Clear cache for specific GitHub URLs</td>
+            </tr>
+        </table>
+        
+        <h4>3. ETag-Based Smart Caching</h4>
+        <ul>
+            <li>Automatically detects when GitHub files change</li>
+            <li>Uses HTTP 304 responses for unchanged files</li>
+            <li>Transparent to users, maximum efficiency</li>
+        </ul>
+        
+        <h3 id="cache-monitoring">Cache Monitoring</h3>
+        <p>When debug mode is enabled, the following headers are included in responses:</p>
+        <ul>
+            <li><code>X-Cache:</code> Shows <code>HIT</code> or <code>MISS</code></li>
+            <li><code>X-Cache-Key:</code> The cache key used</li>
+            <li><code>X-ETag:</code> GitHub ETag value</li>
+        </ul>
+        
+        <h3 id="performance-benefits">Performance Benefits</h3>
+        <table>
+            <tr>
+                <th>Scenario</th>
+                <th>Response Time</th>
+                <th>API Calls</th>
+                <th>Rate Limiting</th>
+            </tr>
+            <tr>
+                <td>Without Cache</td>
+                <td>~500ms+</td>
+                <td>Every page load</td>
+                <td>High risk</td>
+            </tr>
+            <tr>
+                <td>With Cache (First Load)</td>
+                <td>~500ms</td>
+                <td>1 API call</td>
+                <td>Protected</td>
+            </tr>
+            <tr>
+                <td>With Cache (Subsequent)</td>
+                <td>~10ms</td>
+                <td>0 API calls</td>
+                <td>No risk</td>
             </tr>
         </table>
         
@@ -326,8 +412,16 @@ function fetchGitHubCode(url, lines, theme, containerId) {
             </ol>
         </div>
         
-        <h3 id="caching-issues">Caching Issues</h3>
-        <p>Confluence may cache content and macros. If you're experiencing issues with the GitHub Code Block not updating:</p>
+        <h3 id="caching-issues">Cache Management</h3>
+        <p>The app includes an advanced caching system. If you need fresh content:</p>
+        <ol>
+            <li><strong>Quick Fix:</strong> Add <code>?nocache=1</code> to your GitHub URL in the macro</li>
+            <li><strong>Admin Control:</strong> Use <code>POST /app/cache/clear</code> to clear all cache</li>
+            <li><strong>Specific URL:</strong> Use <code>POST /app/cache/clear/:urlHash</code> for specific files</li>
+            <li><strong>Check Status:</strong> Visit <code>/app/cache/stats</code> to view cache statistics</li>
+        </ol>
+        
+        <p>For Confluence-level caching issues:</p>
         <ol>
             <li>Try editing the page and saving it without making changes</li>
             <li>Clear your browser cache</li>

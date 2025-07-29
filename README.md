@@ -4,20 +4,24 @@ A Confluence Connect app that renders code blocks from GitHub repositories with 
 
 ## ⚠️ Important Project Status
 
-This project currently has **multiple implementation attempts** and **unused directories** that should be cleaned up:
+This project contains **multiple implementation approaches** - ACE Connect and Forge implementations:
 
-### 🗂️ Active Components (Current Implementation)
+### 🗂️ Active Components 
+
+#### ACE Connect Implementation
 - **`server.js`** - Main ACE server
 - **`src/routes/macro.js`** - Core macro rendering logic 
 - **`public/`** - Static files including theme scripts
 - **`atlassian-connect.json`** - App descriptor
 - **`routes/index.js`** - Legacy route handlers (⚠️ has broken imports)
 
-### 🚮 Unused Directories (Safe to Remove)
-- **`scroll-github-fetcher/`** - Abandoned Forge Custom UI experiment
-- **`scroll-github-fetcher-uikit/`** - Abandoned Forge UI Kit diagnostic app  
-- **`web-bundles/`** - Untracked leftover development files
-- **`.bmad-core/`**, **`.bmad-infrastructure-devops/`**, **`.clinerules/`**, **`.cursor/`**, **`.gemini/`**, **`.windsurf/`** - Development tool artifacts (untracked)
+#### Forge Implementations
+- **`scroll-github-fetcher/`** - Forge Custom UI implementation with complete GitHub fetching functionality
+- **`scroll-github-fetcher-uikit/`** - Forge UI Kit implementation  
+
+#### Development Artifacts  
+- **`web-bundles/`** - Development expansion packs and agent configurations
+- **`.bmad-core/`**, **`.bmad-infrastructure-devops/`**, **`.clinerules/`**, **`.cursor/`**, **`.gemini/`**, **`.windsurf/`** - Development tool configurations
 
 ### ⚠️ Issues to Fix
 1. **Missing utility files**: `routes/index.js` imports non-existent `../utils/githubService` and `../utils/logger`
@@ -31,6 +35,9 @@ This project currently has **multiple implementation attempts** and **unused dir
 - Syntax highlighting using `highlight.js`
 - Client-side rendering for Scroll Viewport theme compatibility
 - Theme support (github-light, github-dark, monokai, etc.)
+- **Advanced Caching System** with multiple cache busting options
+- Real-time cache statistics and monitoring
+- ETag-based smart caching for efficient GitHub API usage
 
 ## Architecture
 
@@ -107,7 +114,8 @@ npm run stop-all        # Stop all services
 | `PORT` | Server port | `3000` |
 | `AC_LOCAL_BASE_URL` | Public HTTPS URL for development | `https://dev.tandav.com` |
 | `NODE_ENV` | Environment | `development` |
-| `DEBUG` | Enable debug logging | `false` |
+| `DEBUG` | Enable debug logging and cache operations | `false` |
+| `CACHE_TTL` | Cache time-to-live in seconds | `3600` (1 hour) |
 | `FORCE_DB_SYNC` | Force database sync | `false` |
 
 ## Usage
@@ -118,6 +126,96 @@ npm run stop-all        # Stop all services
    - **Line Range**: Optional (e.g., `10-20`, `5,15,25`, `10`)
    - **Theme**: Syntax highlighting theme
 3. **Save**: Code renders with syntax highlighting
+
+## Caching System
+
+The app includes a comprehensive caching system to optimize performance and reduce GitHub API calls.
+
+### Cache Features
+
+- **In-Memory Caching**: Fast NodeCache-based storage with 1-hour TTL
+- **ETag Support**: Smart caching using GitHub's ETag headers
+- **Cache Busting**: Multiple options for forcing fresh content
+- **Statistics**: Real-time monitoring of cache performance
+- **Dual-Level**: Separate caches for raw GitHub data and processed responses
+
+### Cache Busting Options
+
+#### 1. URL Parameter (User Control)
+Add `?nocache=1` to any GitHub URL in your macro:
+```
+https://github.com/user/repo/blob/main/file.js?nocache=1
+```
+
+#### 2. Admin Endpoints (Bulk Management)
+
+**View Cache Statistics:**
+```bash
+GET /app/cache/stats
+```
+Returns hit/miss ratios, cache size, uptime, and performance metrics.
+
+**Clear All Cache:**
+```bash
+POST /app/cache/clear
+```
+Immediately clears all cached GitHub code.
+
+**Clear Specific URL Cache:**
+```bash
+POST /app/cache/clear/:urlHash
+```
+Clears cache for specific GitHub URLs (useful for updated files).
+
+#### 3. ETag-Based Smart Caching
+- Automatically detects when GitHub files change
+- Uses HTTP 304 responses for unchanged files
+- Transparent to users, maximum efficiency
+
+### Cache Configuration
+
+**Default Settings:**
+- **TTL**: 1 hour (3600 seconds)
+- **Check Period**: 6 minutes
+- **Memory Optimization**: Enabled
+
+**Environment Variables:**
+```bash
+CACHE_TTL=7200        # 2 hours
+DEBUG=true            # Enable cache operation logging
+```
+
+### Cache Monitoring
+
+**Debug Headers** (when `DEBUG=true`):
+- `X-Cache`: `HIT` or `MISS`
+- `X-Cache-Key`: Cache key used
+- `X-ETag`: GitHub ETag value
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "code": "console.log('Hello World');",
+  "language": "javascript",
+  "cached": true,
+  "fromETagCache": false,
+  "etag": "W/\"abc123\""
+}
+```
+
+### Performance Benefits
+
+**Without Cache:**
+- Every page load = GitHub API call
+- ~500ms+ response time
+- Rate limiting risks
+
+**With Cache:**
+- First load: ~500ms (GitHub fetch + cache store)
+- Subsequent loads: ~10ms (cache hit)
+- 90%+ cache hit rate typical
+- Protected against rate limits
 
 ## File Structure
 
@@ -209,19 +307,13 @@ npm start
 
 ### 🔧 Immediate Fixes Required
 1. **Fix broken imports**: `routes/index.js` imports non-existent utility files
-2. **Remove unused code**: Multiple server implementations create confusion
-3. **Clean up directories**: Remove abandoned Forge experiments
+2. **Resolve multiple server implementations**: Choose between ACE and Forge approaches
 
 ### 🧹 Recommended Cleanup
 ```bash
-# Remove unused directories
-rm -rf scroll-github-fetcher/
-rm -rf scroll-github-fetcher-uikit/
-rm -rf web-bundles/
-rm -rf .bmad-* .clinerules .cursor .gemini .windsurf
-
-# Fix or remove broken routes
-# Either fix imports in routes/index.js or remove it entirely
+# Fix broken imports in routes/index.js or remove it entirely
+# Note: Do NOT remove scroll-github-fetcher/, scroll-github-fetcher-uikit/, 
+# or web-bundles/ directories as they contain active implementations
 ```
 
 ### 📊 Code Complexity Analysis

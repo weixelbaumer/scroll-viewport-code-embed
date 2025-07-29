@@ -1,8 +1,8 @@
 {
     "key": "com.apryse.github-fetcher",
-    "name": "GitHub Code Fetcher",
+    "name": "Live GitHub Code Block Renderer",
     "description": "Fetches and displays code from GitHub with syntax highlighting.",
-    "version": "3.1.0",
+    "version": "3.1.8",
     "baseUrl": "https://dev.tandav.com",
     "vendor": {
         "name": "Apryse",
@@ -39,12 +39,11 @@
                 "url": "/app/render-github-macro?url={macro.parameter.url}&lines={macro.parameter.lines}&theme={macro.parameter.theme}",
                 "outputType": "block",
                 "bodyType": "none",
-                "renderModes": [
-                    {
-                        "view": "default",
+                "renderModes": {
+                    "default": {
                         "url": "/app/render-github-macro-static?url={macro.parameter.url}&lines={macro.parameter.lines}&theme={macro.parameter.theme}"
                     }
-                ],
+                },
                 "icon": {
                     "width": 64,
                     "height": 64,
