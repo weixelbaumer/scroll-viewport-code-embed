@@ -109,3 +109,4 @@ serena/
 .serena/
 run-serena.sh
 SERENA_SETUP.md
+db/database.sqlite
