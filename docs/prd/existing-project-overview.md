@@ -1,0 +1,3 @@
+# Existing Project Overview
+
+The current system, `kb.itextpdf.com`, is a public-facing developer knowledge base for the iText SDK and its four sub-products. The content is managed in four corresponding spaces within Confluence Cloud and is rendered as a static website by the third-party app "Scroll Viewport by K15T". Its core function is to provide searchable, SEO-indexed documentation and over 100 live Java and C# code examples managed via GitHub.
