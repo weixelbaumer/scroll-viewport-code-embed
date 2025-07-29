@@ -1,6 +1,6 @@
 /**
  * Scroll Viewport Custom Theme JavaScript  
- * Version: 3.1.0 (synchronized with Confluence app)
+ * Version: 3.1.1 (synchronized with Confluence app)
  * 
  * This script provides custom functionality for the Scroll Viewport theme including:
  * - Module 0: GitHub Code Processing
@@ -124,24 +124,49 @@
     }
     
     /**
-     * Fetch and render GitHub code
+     * Fetch and render GitHub code with retry logic
      */
-    async function fetchAndRenderCode(url, lines, theme, container) {
+    async function fetchAndRenderCode(url, lines, theme, container, retryCount = 0) {
+        const maxRetries = 2;
+        const retryDelay = 1000;
+        
         try {
             const rawUrl = getRawGitHubUrl(url);
             if (!rawUrl) {
                 throw new Error('Invalid GitHub URL format');
             }
             
-            // Fetch the code
-            const response = await fetch(rawUrl);
+            console.log(`${GITHUB_LOG_PREFIX} Fetching: ${rawUrl}`);
+            
+            // Fetch the code with proper headers
+            const response = await fetch(rawUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'text/plain',
+                    'Cache-Control': 'no-cache'
+                },
+                mode: 'cors'
+            });
+            
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                if (response.status === 403) {
+                    throw new Error(`GitHub API rate limit exceeded (403). Please try again later.`);
+                } else if (response.status === 404) {
+                    throw new Error(`GitHub file not found (404). Check the URL: ${url}`);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
             }
             
             const code = await response.text();
+            if (!code || code.trim() === '') {
+                throw new Error('Empty response from GitHub');
+            }
+            
             const codeToHighlight = extractLines(code, lines);
             const language = detectLanguage(rawUrl);
+            
+            console.log(`${GITHUB_LOG_PREFIX} Successfully fetched ${code.length} characters for ${language}`);
             
             // Wait for highlight.js to load
             const hljs = await window.hljsLoadPromise;
@@ -155,6 +180,7 @@
                     highlightedCode = escapeHtml(codeToHighlight);
                 }
             } else {
+                console.warn(`${GITHUB_LOG_PREFIX} No highlighter for ${language}, using plain text`);
                 highlightedCode = escapeHtml(codeToHighlight);
             }
             
@@ -162,6 +188,7 @@
             const codeBlock = document.createElement('div');
             codeBlock.className = 'github-code-block';
             codeBlock.setAttribute('data-theme', theme || 'github-light');
+            codeBlock.setAttribute('data-github-processed', 'true');
             
             // Add GitHub-style code block
             codeBlock.innerHTML = `
@@ -172,13 +199,33 @@
                 <pre class="hljs"><code class="language-${language}">${highlightedCode}</code></pre>
             `;
             
-            container.parentNode.replaceChild(codeBlock, container);
+            // Replace the container
+            if (container.parentNode) {
+                container.parentNode.replaceChild(codeBlock, container);
+                console.log(`${GITHUB_LOG_PREFIX} Successfully rendered code block for ${url}`);
+            } else {
+                console.error(`${GITHUB_LOG_PREFIX} Container has no parent node`);
+            }
             
         } catch (error) {
-            console.error(`${GITHUB_LOG_PREFIX} Failed to fetch code:`, error);
-            container.innerHTML = `<div class="github-code-error">
-                Error loading GitHub code: ${escapeHtml(error.message)}
-            </div>`;
+            console.error(`${GITHUB_LOG_PREFIX} Failed to fetch code (attempt ${retryCount + 1}):`, error);
+            
+            // Retry logic
+            if (retryCount < maxRetries && !error.message.includes('404') && !error.message.includes('Invalid GitHub URL')) {
+                console.log(`${GITHUB_LOG_PREFIX} Retrying in ${retryDelay}ms...`);
+                setTimeout(() => {
+                    fetchAndRenderCode(url, lines, theme, container, retryCount + 1);
+                }, retryDelay);
+                return;
+            }
+            
+            // Final error display
+            container.className = 'github-code-error';
+            container.innerHTML = `
+                <strong>GitHub Code Error:</strong><br>
+                ${escapeHtml(error.message)}<br>
+                <small>URL: ${escapeHtml(url)}</small>
+            `;
         }
     }
     
@@ -188,11 +235,16 @@
     function processGitHubMarkers() {
         console.log(`${GITHUB_LOG_PREFIX} Processing GitHub code markers...`);
         
+        // Find all text nodes containing GitHub markers
         const walker = document.createTreeWalker(
             document.body,
             NodeFilter.SHOW_TEXT,
             {
                 acceptNode: node => {
+                    // Skip already processed nodes
+                    if (node.parentElement.closest('.github-code-block, .github-code-loading, .github-code-error')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
                     if (node.parentElement.closest('script, style, code, pre')) {
                         return NodeFilter.FILTER_REJECT;
                     }
@@ -209,51 +261,76 @@
             nodesToProcess.push(node);
         }
         
-        nodesToProcess.forEach(textNode => {
-            const text = textNode.nodeValue;
-            const matches = [...text.matchAll(GITHUB_MARKER_PATTERN)];
-            
-            if (matches.length === 0) return;
-            
-            const parent = textNode.parentNode;
-            const fragment = document.createDocumentFragment();
-            let lastIndex = 0;
-            
-            matches.forEach(match => {
-                const [fullMatch, params] = match;
-                const index = match.index;
+        console.log(`${GITHUB_LOG_PREFIX} Found ${nodesToProcess.length} text nodes with GitHub markers`);
+        
+        nodesToProcess.forEach((textNode, nodeIndex) => {
+            try {
+                const text = textNode.nodeValue;
+                const matches = [...text.matchAll(GITHUB_MARKER_PATTERN)];
                 
-                // Add text before the marker
-                if (index > lastIndex) {
-                    fragment.appendChild(
-                        document.createTextNode(text.substring(lastIndex, index))
-                    );
+                if (matches.length === 0) return;
+                
+                console.log(`${GITHUB_LOG_PREFIX} Processing ${matches.length} markers in text node ${nodeIndex + 1}`);
+                
+                const parent = textNode.parentNode;
+                if (!parent) return;
+                
+                const fragment = document.createDocumentFragment();
+                let lastIndex = 0;
+                
+                matches.forEach((match, matchIndex) => {
+                    const [fullMatch, params] = match;
+                    const index = match.index;
+                    
+                    // Add text before the marker
+                    if (index > lastIndex) {
+                        const textBefore = text.substring(lastIndex, index);
+                        if (textBefore.trim()) {
+                            fragment.appendChild(document.createTextNode(textBefore));
+                        }
+                    }
+                    
+                    // Parse marker parameters
+                    const [url, lines, theme] = params.split('|').map(s => s?.trim()).filter(Boolean);
+                    
+                    if (!url) {
+                        console.warn(`${GITHUB_LOG_PREFIX} Empty URL in marker ${matchIndex + 1}`);
+                        return;
+                    }
+                    
+                    // Create unique placeholder
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'github-code-loading';
+                    placeholder.setAttribute('data-github-url', url);
+                    placeholder.setAttribute('data-github-index', `${nodeIndex}-${matchIndex}`);
+                    placeholder.textContent = `Loading GitHub code from ${url.split('/').pop()}...`;
+                    
+                    fragment.appendChild(placeholder);
+                    
+                    console.log(`${GITHUB_LOG_PREFIX} Created placeholder for ${url}`);
+                    
+                    // Add small delay between requests to avoid rate limiting
+                    setTimeout(() => {
+                        fetchAndRenderCode(url, lines, theme, placeholder);
+                    }, matchIndex * 200);
+                    
+                    lastIndex = index + fullMatch.length;
+                });
+                
+                // Add remaining text
+                if (lastIndex < text.length) {
+                    const textAfter = text.substring(lastIndex);
+                    if (textAfter.trim()) {
+                        fragment.appendChild(document.createTextNode(textAfter));
+                    }
                 }
                 
-                // Parse marker parameters
-                const [url, lines, theme] = params.split('|').map(s => s?.trim());
+                // Replace the original text node
+                parent.replaceChild(fragment, textNode);
                 
-                // Create placeholder
-                const placeholder = document.createElement('div');
-                placeholder.className = 'github-code-loading';
-                placeholder.textContent = 'Loading GitHub code...';
-                
-                fragment.appendChild(placeholder);
-                
-                // Fetch and render asynchronously
-                fetchAndRenderCode(url, lines, theme, placeholder);
-                
-                lastIndex = index + fullMatch.length;
-            });
-            
-            // Add remaining text
-            if (lastIndex < text.length) {
-                fragment.appendChild(
-                    document.createTextNode(text.substring(lastIndex))
-                );
+            } catch (error) {
+                console.error(`${GITHUB_LOG_PREFIX} Error processing text node:`, error);
             }
-            
-            parent.replaceChild(fragment, textNode);
         });
     }
     
