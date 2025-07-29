@@ -6,6 +6,9 @@
   "scripts": {
     "start": "NODE_ENV=development AC_LOCAL_BASE_URL=https://dev.tandav.com FORCE_DB_SYNC=true node server.js",
     "dev": "nodemon server.js",
+    "start-all": "./start-all.sh",
+    "start-all-clean": "./start-all.sh --force-install",
+    "stop-all": "./stop-all.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

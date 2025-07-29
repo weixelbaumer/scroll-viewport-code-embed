@@ -1,0 +1,49 @@
+[33m[nodemon] 3.1.9[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node server.js`[39m
+Database will be created at (absolute): /Users/weix/Code/Apryse/iText Confluence/scroll-viewport-code-embed/db/database.sqlite
+ACE configuration: {
+  "config": {
+    "development": {
+      "port": 3000,
+      "localBaseUrl": "https://dev.tandav.com",
+      "store": {
+        "adapter": "sequelize",
+        "dialect": "sqlite",
+        "storage": "/Users/weix/Code/Apryse/iText Confluence/scroll-viewport-code-embed/db/database.sqlite",
+        "logging": false
+      },
+      "watch": false
+    },
+    "production": {
+      "port": "3000",
+      "store": {
+        "adapter": "sequelize",
+        "dialect": "postgres",
+        "ssl": true,
+        "dialectOptions": {
+          "ssl": {
+            "require": true,
+            "rejectUnauthorized": false
+          }
+        }
+      }
+    }
+  }
+}
+Attempting ACE initialization...
+Overriding SQLite storage from /Users/weix/Code/Apryse/iText Confluence/scroll-viewport-code-embed/db/database.sqlite to /Users/weix/Code/Apryse/iText Confluence/scroll-viewport-code-embed/database.sqlite
+Forcing SQLite to use file-based storage at: /Users/weix/Code/Apryse/iText Confluence/scroll-viewport-code-embed/database.sqlite
+[1m[90mAuto registration is not available for this add-on.[39m[22m
+ACE initialization completed successfully.
+ACE Initialized. Active environment: [development]
+Store configuration being used: {
+  "adapter": "sequelize",
+  "dialect": "sqlite",
+  "storage": "/Users/weix/Code/Apryse/iText Confluence/scroll-viewport-code-embed/database.sqlite",
+  "logging": false
+}
+Server is running on port 3000
+Atlassian Connect Base URL should be set to: https://dev.tandav.com

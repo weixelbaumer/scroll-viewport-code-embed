@@ -1,0 +1,34 @@
+2025-07-29T06:49:40Z INF Starting tunnel tunnelID=bc7d7a18-73c7-4e7e-9589-641c878ec0ae
+2025-07-29T06:49:40Z INF Version 2025.5.0 (Checksum ac2b2b2050ce21382b8b36774180c4d56ab0ef564d6880b94d17bf75db1a27e6)
+2025-07-29T06:49:40Z INF GOOS: darwin, GOVersion: go1.24.3, GoArch: arm64
+2025-07-29T06:49:40Z INF Settings: map[config:/Users/weix/.cloudflared/config.yml cred-file:/Users/weix/.cloudflared/bc7d7a18-73c7-4e7e-9589-641c878ec0ae.json credentials-file:/Users/weix/.cloudflared/bc7d7a18-73c7-4e7e-9589-641c878ec0ae.json]
+2025-07-29T06:49:40Z INF cloudflared will not automatically update if installed by a package manager.
+2025-07-29T06:49:40Z INF Generated Connector ID: fd8f79c4-d8c6-49de-a91a-1d026b1b4387
+2025-07-29T06:49:40Z INF Initial protocol quic
+2025-07-29T06:49:40Z INF ICMP proxy will use 192.168.0.36 as source for IPv4
+2025-07-29T06:49:40Z INF ICMP proxy will use fe80::1494:e717:f8a3:1005 in zone en0 as source for IPv6
+2025-07-29T06:49:40Z INF Created ICMP proxy listening on 192.168.0.36:0
+2025-07-29T06:49:40Z INF ICMP proxy will use 192.168.0.36 as source for IPv4
+2025-07-29T06:49:40Z INF ICMP proxy will use fe80::1494:e717:f8a3:1005 in zone en0 as source for IPv6
+2025-07-29T06:49:40Z INF Starting metrics server on 127.0.0.1:20241/metrics
+2025-07-29T06:49:40Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(25497) CurveP256] connIndex=0 event=0 ip=198.41.200.233
+2025-07-29T06:49:41Z INF Registered tunnel connection connIndex=0 connection=ea5fb31e-d621-4bbf-aeb0-2707fc9983af event=0 ip=198.41.200.233 location=mad06 protocol=quic
+2025-07-29T06:49:41Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(25497) CurveP256] connIndex=1 event=0 ip=198.41.192.107
+2025-07-29T06:49:41Z INF Registered tunnel connection connIndex=1 connection=156c21d7-25df-491f-addb-4576824cb02c event=0 ip=198.41.192.107 location=mad01 protocol=quic
+2025-07-29T06:49:42Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(25497) CurveP256] connIndex=2 event=0 ip=198.41.192.57
+2025-07-29T06:49:42Z INF Registered tunnel connection connIndex=2 connection=5b1c072f-bffd-42f9-bf2f-b4ce58de6e08 event=0 ip=198.41.192.57 location=mad01 protocol=quic
+2025-07-29T06:49:43Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveID(25497) CurveP256] connIndex=3 event=0 ip=198.41.200.33
+2025-07-29T06:49:43Z INF Registered tunnel connection connIndex=3 connection=92c275ce-544f-4248-9825-d22c9edd0500 event=0 ip=198.41.200.33 location=mad06 protocol=quic
+2025-07-29T06:51:16Z INF Initiating graceful shutdown due to signal terminated ...
+2025-07-29T06:51:17Z ERR Failed to serve tunnel connection error="context canceled" connIndex=3 event=0 ip=198.41.200.33
+2025-07-29T06:51:17Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.200.33
+2025-07-29T06:51:17Z ERR Failed to serve tunnel connection error="context canceled" connIndex=1 event=0 ip=198.41.192.107
+2025-07-29T06:51:17Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.107
+2025-07-29T06:51:17Z ERR Failed to serve tunnel connection error="context canceled" connIndex=2 event=0 ip=198.41.192.57
+2025-07-29T06:51:17Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.192.57
+2025-07-29T06:51:17Z ERR Failed to serve tunnel connection error="context canceled" connIndex=0 event=0 ip=198.41.200.233
+2025-07-29T06:51:17Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.233
+2025-07-29T06:51:17Z ERR no more connections active and exiting
+2025-07-29T06:51:17Z INF Tunnel server stopped
+2025-07-29T06:51:17Z INF icmp router terminated error="read udp 192.168.0.36:0: raw-read udp 192.168.0.36:0: use of closed network connection"
+2025-07-29T06:51:17Z INF Metrics server stopped

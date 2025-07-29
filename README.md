@@ -56,6 +56,24 @@ The app uses a **hybrid rendering approach**:
 
 ### Quick Start
 
+#### Option 1: Complete Automated Setup (Recommended)
+```bash
+# Start everything at once (handles npm install, server, and tunnel)
+./start-all.sh
+
+# Or force reinstall dependencies and start everything
+./start-all.sh --force-install
+
+# Stop all services
+./stop-all.sh
+
+# Or use npm scripts
+npm run start-all
+npm run start-all-clean  # Force clean install
+npm run stop-all        # Stop all services
+```
+
+#### Option 2: Manual Setup
 1. **Install dependencies**:
    ```bash
    npm install
@@ -80,7 +98,7 @@ The app uses a **hybrid rendering approach**:
 
 5. **Install in Confluence**:
    - Go to Confluence → Manage apps → Development mode
-   - Upload app: `https://your-tunnel-url.com/atlassian-connect.json`
+   - Upload app: `https://dev.tandav.com/atlassian-connect.json`
 
 ### Environment Variables
 
@@ -152,10 +170,37 @@ scroll-viewport-code-embed/
 DEBUG=true npm start
 ```
 
+### Startup Script Troubleshooting
+
+**Script won't start:**
+```bash
+# Make sure script is executable
+chmod +x start-all.sh
+
+# Check for dependency issues
+./start-all.sh --force-install
+```
+
+**Monitor services:**
+```bash
+# Check logs in separate terminals
+tail -f startup.log.server  # Server logs
+tail -f startup.log.tunnel  # Tunnel logs  
+tail -f startup.log         # Main script logs
+```
+
+**Clean restart:**
+```bash
+# Kill all processes and clean start
+killall node
+pkill -f cloudflared
+./start-all.sh --force-install
+```
+
 ### Clean Installation
 ```bash
 # Remove old dependencies and database
-rm -rf node_modules db/database.sqlite
+rm -rf node_modules db/database.sqlite package-lock.json
 npm install
 npm start
 ```
