@@ -121,5 +121,105 @@ resolver.define('fetchGitHubCode', async (req) => {
   }
 });
 
+// Export function for Scroll Viewport compatibility
+resolver.define('exportForScrollViewport', async (req) => {
+  console.log('[Forge Export] exportForScrollViewport invoked. Payload:', req.payload);
+
+  const { githubUrl, lineRange, theme } = req.payload?.config || {};
+
+  if (!githubUrl) {
+    return {
+      html: '<div style="color: red; border: 1px solid red; padding: 10px; border-radius: 4px;">Error: GitHub URL not configured for this macro.</div>'
+    };
+  }
+
+  const rawUrl = getRawGitHubUrl(githubUrl);
+  if (!rawUrl) {
+    return {
+      html: `<div style="color: red; border: 1px solid red; padding: 10px; border-radius: 4px;">Error: Invalid GitHub URL format: ${githubUrl}</div>`
+    };
+  }
+
+  try {
+    const response = await api.fetch(rawUrl);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return {
+          html: `<div style="color: red; border: 1px solid red; padding: 10px; border-radius: 4px;">Error: GitHub file not found (404): ${rawUrl}</div>`
+        };
+      } else if (response.status === 403) {
+        return {
+          html: `<div style="color: red; border: 1px solid red; padding: 10px; border-radius: 4px;">Error: Access denied (403) for ${rawUrl}. Check if the repository is private or if rate limits were exceeded.</div>`
+        };
+      }
+      return {
+        html: `<div style="color: red; border: 1px solid red; padding: 10px; border-radius: 4px;">Error: GitHub fetch failed with status ${response.status}</div>`
+      };
+    }
+
+    const rawCode = await response.text();
+    const finalCode = extractLines(rawCode, lineRange);
+    
+    // Detect language for syntax highlighting
+    const language = detectLanguageFromUrl(githubUrl);
+    
+    // Return HTML with embedded Prism.js for syntax highlighting
+    const html = `
+      <div class="github-code-block-export ${theme || 'github-light'}" style="margin: 16px 0;">
+        <div style="background: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 6px; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;">
+          <div style="padding: 8px 16px; border-bottom: 1px solid #e1e4e8; font-size: 12px; color: #586069;">
+            <strong>📁 ${githubUrl.split('/').pop()}</strong> ${lineRange ? `(lines ${lineRange})` : ''}
+          </div>
+          <pre style="margin: 0; padding: 16px; overflow-x: auto; background: transparent;"><code class="language-${language}" style="font-size: 12px; line-height: 1.45;">${escapeHtml(finalCode)}</code></pre>
+        </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+      </div>
+    `;
+
+    return { html };
+
+  } catch (error) {
+    console.error(`[Forge Export] Unexpected error fetching ${rawUrl}:`, error);
+    return {
+      html: `<div style="color: red; border: 1px solid red; padding: 10px; border-radius: 4px;">Error: An unexpected error occurred: ${error.message}</div>`
+    };
+  }
+});
+
+// Helper function for HTML escaping
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+// Helper function to detect language from URL for export
+function detectLanguageFromUrl(url) {
+  if (!url) return 'plaintext';
+  const filenameMatch = url.match(/[^/\\?#]+(?=[?#]|$)/);
+  if (!filenameMatch) return 'plaintext';
+  const extensionMatch = filenameMatch[0].match(/\.([^.]+)$/);
+  const ext = extensionMatch ? extensionMatch[1].toLowerCase() : '';
+  const langMap = {
+    js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript',
+    py: 'python', java: 'java', rb: 'ruby', php: 'php', cs: 'csharp',
+    go: 'go', rs: 'rust', cpp: 'cpp', c: 'c', h: 'c', hpp: 'cpp',
+    html: 'markup', xml: 'markup', css: 'css', scss: 'scss', less: 'less',
+    md: 'markdown', json: 'json', yaml: 'yaml', yml: 'yaml',
+    sh: 'bash', sql: 'sql', kt: 'kotlin', swift: 'swift',
+    dockerfile: 'docker', groovy: 'groovy', scala: 'scala',
+    perl: 'perl', lua: 'lua', r: 'r', dart: 'dart'
+  };
+  return langMap[ext] || 'plaintext';
+}
+
 // Export the handler function for Forge
 export const handler = resolver.getDefinitions();

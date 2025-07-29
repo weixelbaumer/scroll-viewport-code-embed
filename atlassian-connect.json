@@ -2,7 +2,7 @@
     "key": "com.apryse.github-fetcher",
     "name": "GitHub Code Fetcher",
     "description": "Fetches and displays code from GitHub with syntax highlighting.",
-    "version": "1.1.15",
+    "version": "3.1.0",
     "baseUrl": "https://dev.tandav.com",
     "vendor": {
         "name": "Apryse",
@@ -39,6 +39,12 @@
                 "url": "/app/render-github-macro?url={macro.parameter.url}&lines={macro.parameter.lines}&theme={macro.parameter.theme}",
                 "outputType": "block",
                 "bodyType": "none",
+                "renderModes": [
+                    {
+                        "view": "default",
+                        "url": "/app/render-github-macro-static?url={macro.parameter.url}&lines={macro.parameter.lines}&theme={macro.parameter.theme}"
+                    }
+                ],
                 "icon": {
                     "width": 64,
                     "height": 64,

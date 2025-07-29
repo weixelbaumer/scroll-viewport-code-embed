@@ -1,11 +1,13 @@
 modules:
   macro:
-    - key: scroll-github-fetcher-confluence-custom-ui-custom-config-macro
+    - key: github-code-macro
       resource: main
       resolver:
         function: resolver
-      title: scroll-github-fetcher
-      description: Inserts a custom config macro for custom UI
+      export:
+        function: exportForScrollViewport
+      title: GitHub Code Block
+      description: Embeds and syntax highlights code from a GitHub URL
       config:
         resource: macro-config
         viewportSize: max
@@ -13,11 +15,19 @@ modules:
   function:
     - key: resolver
       handler: index.handler
+    - key: exportForScrollViewport
+      handler: index.handler
 resources:
   - key: main
     path: static/hello-world/build # Reverted path to expected build directory
   - key: macro-config
     path: static/config/build
+permissions:
+  external:
+    fetch:
+      backend:
+        - 'raw.githubusercontent.com'
+        - 'api.github.com'
 app:
   runtime:
     name: nodejs22.x

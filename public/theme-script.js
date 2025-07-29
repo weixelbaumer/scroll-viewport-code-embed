@@ -8,6 +8,7 @@
 
     // --- Configuration ---
     const ANCHOR_SELECTOR = 'a.github-code-anchor'; // Class name MUST match output from src/routes/macro.js
+    const TEXT_MARKER_PATTERN = /##GITHUB:([^#]+)##/g; // Pattern for text markers
     const MAX_RETRIES = 2; // Retries for fetching GitHub content
     const RETRY_DELAY_MS = 500; // Delay between retries
     // ---------------------
@@ -153,15 +154,143 @@
             return;
         }
 
-        const rawUrl = getRawGitHubUrl(githubUrl);
-        if (!rawUrl) {
-            showError(anchor, `Invalid or unsupported GitHub URL format: ${githubUrl}`);
-            anchor.setAttribute('data-github-processed', 'true');
-            anchor.removeAttribute('data-github-processing');
-            return;
+        // Use the shared function to fetch and render code
+        await fetchAndRenderCode(githubUrl, lines, theme, anchor);
+        
+        // Mark as processed
+        anchor.setAttribute('data-github-processed', 'true');
+        anchor.removeAttribute('data-github-processing');
+    }
+
+    // Function to display errors in place of the anchor
+    function showError(anchorElement, message) {
+        anchorElement.textContent = `[GitHub Code Error: ${message}]`;
+        anchorElement.style.color = 'red';
+        anchorElement.style.border = '1px solid red';
+        anchorElement.style.backgroundColor = '#fee';
+        anchorElement.style.padding = '5px';
+        anchorElement.style.display = 'inline-block';
+    }
+
+    // Function to find and process all unprocessed anchors and text markers
+    function processAllAnchors() {
+        console.log(`[GitHub Theme Script] Searching for anchors with selector: ${ANCHOR_SELECTOR}`);
+        const anchors = document.querySelectorAll(ANCHOR_SELECTOR);
+        console.log(`[GitHub Theme Script] Found ${anchors.length} anchors.`);
+
+        if (anchors.length === 0) {
+             console.log("[GitHub Theme Script] No anchors found matching selector. Ensure server output matches.");
+             const allAnchors = document.querySelectorAll('a[data-url]');
+             console.log(`[GitHub Theme Script] DEBUG: Found ${allAnchors.length} anchors with data-url.`);
         }
 
+        anchors.forEach(anchor => {
+            if (!anchor.hasAttribute('data-github-processed') && !anchor.hasAttribute('data-github-processing')) {
+                 processAnchor(anchor);
+            }
+        });
+
+        // Also process text markers for Scroll Viewport compatibility
+        processTextMarkers();
+    }
+
+    // Function to process text markers (for Scroll Viewport)
+    function processTextMarkers() {
+        console.log("[GitHub Theme Script] Processing text markers for Scroll Viewport compatibility");
+        
+        // Walk through all text nodes to find markers
+        const walker = document.createTreeWalker(
+            document.body,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+
+        const textNodes = [];
+        let node;
+        while (node = walker.nextNode()) {
+            if (node.nodeValue && node.nodeValue.includes("##GITHUB:")) {
+                textNodes.push(node);
+            }
+        }
+
+        textNodes.forEach(textNode => {
+            if (textNode.hasAttribute && textNode.hasAttribute('data-github-processed')) {
+                return; // Already processed
+            }
+
+            const text = textNode.nodeValue;
+            const matches = text.match(TEXT_MARKER_PATTERN);
+            
+            if (matches && matches.length > 0) {
+                processTextMarker(textNode, matches);
+            }
+        });
+    }
+
+    // Function to process a single text marker
+    function processTextMarker(textNode, matches) {
         try {
+            const text = textNode.nodeValue;
+            const parent = textNode.parentNode;
+            
+            // Split text at markers
+            const parts = text.split(TEXT_MARKER_PATTERN);
+            
+            // Remove original text node
+            parent.removeChild(textNode);
+            
+            // Reconstruct with code blocks
+            for (let i = 0; i < parts.length; i++) {
+                // Add text part
+                if (parts[i]) {
+                    parent.appendChild(document.createTextNode(parts[i]));
+                }
+                
+                // Add code block for each marker
+                if (i < matches.length) {
+                    const marker = matches[i];
+                    const markerContent = marker.replace('##GITHUB:', '').replace('##', '');
+                    
+                    // Parse marker content (URL|LINES|THEME format)
+                    const parts = markerContent.split('|');
+                    const url = parts[0];
+                    const lines = parts[1] || '';
+                    const theme = parts[2] || 'github-light';
+                    
+                    // Create placeholder for code
+                    const placeholder = document.createElement('div');
+                    placeholder.textContent = 'Loading GitHub code...';
+                    placeholder.style.padding = '10px';
+                    placeholder.style.background = '#f8f9fa';
+                    placeholder.style.border = '1px solid #dee2e6';
+                    placeholder.style.borderRadius = '4px';
+                    placeholder.style.margin = '10px 0';
+                    
+                    parent.appendChild(placeholder);
+                    
+                    // Fetch and render the code
+                    fetchAndRenderCode(url, lines, theme, placeholder);
+                }
+            }
+            
+            // Mark as processed
+            textNode.setAttribute('data-github-processed', 'true');
+            
+        } catch (error) {
+            console.error('[GitHub Theme Script] Error processing text marker:', error);
+        }
+    }
+
+    // Function to fetch and render code (shared between anchors and text markers)
+    async function fetchAndRenderCode(url, lines, theme, container) {
+        try {
+            const rawUrl = getRawGitHubUrl(url);
+            if (!rawUrl) {
+                showError(container, `Invalid or unsupported GitHub URL format: ${url}`);
+                return;
+            }
+
             const rawCode = await fetchGitHubContentWithRetry(rawUrl);
             const codeToHighlight = extractLines(rawCode, lines);
             const language = detectLanguage(rawUrl);
@@ -184,12 +313,19 @@
             }
 
             const codeBlock = document.createElement('div');
-            codeBlock.className = `code-block github-embed hljs ${theme}`;
+            codeBlock.className = `code-block github-embed hljs`;
             codeBlock.style.whiteSpace = 'pre';
             codeBlock.style.overflowX = 'auto';
             codeBlock.style.border = '1px solid #ccc';
             codeBlock.style.padding = '1em';
             codeBlock.style.backgroundColor = '#f8f8f8';
+            
+            // Apply theme-specific styling
+            if (theme && theme !== 'default') {
+                codeBlock.setAttribute('data-theme', theme);
+                // Add theme-specific CSS classes for highlight.js
+                codeBlock.classList.add(`hljs-theme-${theme.replace('-', '-')}`);
+            }
 
             const pre = document.createElement('pre');
             const code = document.createElement('code');
@@ -199,47 +335,16 @@
             pre.appendChild(code);
             codeBlock.appendChild(pre);
 
-            if (anchor.parentNode) {
-                anchor.parentNode.replaceChild(codeBlock, anchor);
+            if (container.parentNode) {
+                container.parentNode.replaceChild(codeBlock, container);
             } else {
-                 console.warn("[GitHub Theme Script] Anchor lost its parent before replacement:", anchor);
+                 console.warn("[GitHub Theme Script] Container lost its parent before replacement:", container);
             }
 
         } catch (error) {
-            console.error(`[GitHub Theme Script] Failed to process anchor for ${githubUrl}:`, error);
-            showError(anchor, `Error loading code: ${error.message}`);
-            anchor.setAttribute('data-github-processed', 'true');
-            anchor.removeAttribute('data-github-processing');
+            console.error(`[GitHub Theme Script] Failed to process code for ${url}:`, error);
+            showError(container, `Error loading code: ${error.message}`);
         }
-    }
-
-    // Function to display errors in place of the anchor
-    function showError(anchorElement, message) {
-        anchorElement.textContent = `[GitHub Code Error: ${message}]`;
-        anchorElement.style.color = 'red';
-        anchorElement.style.border = '1px solid red';
-        anchorElement.style.backgroundColor = '#fee';
-        anchorElement.style.padding = '5px';
-        anchorElement.style.display = 'inline-block';
-    }
-
-    // Function to find and process all unprocessed anchors
-    function processAllAnchors() {
-        console.log(`[GitHub Theme Script] Searching for anchors with selector: ${ANCHOR_SELECTOR}`);
-        const anchors = document.querySelectorAll(ANCHOR_SELECTOR);
-        console.log(`[GitHub Theme Script] Found ${anchors.length} anchors.`);
-
-        if (anchors.length === 0) {
-             console.log("[GitHub Theme Script] No anchors found matching selector. Ensure server output matches.");
-             const allAnchors = document.querySelectorAll('a[data-url]');
-             console.log(`[GitHub Theme Script] DEBUG: Found ${allAnchors.length} anchors with data-url.`);
-        }
-
-        anchors.forEach(anchor => {
-            if (!anchor.hasAttribute('data-github-processed') && !anchor.hasAttribute('data-github-processing')) {
-                 processAnchor(anchor);
-            }
-        });
     }
 
     // --- Initialization ---
@@ -278,5 +383,11 @@
     });
 
     console.log("GitHub Theme Script v2.0.3: Initialization complete. Waiting for DOM ready / observing mutations.");
+
+    // Export processGitHubCodeMarkers function globally for compatibility
+    window.processGitHubCodeMarkers = function() {
+        console.log("[GitHub Theme Script] processGitHubCodeMarkers called - processing all anchors");
+        processAllAnchors();
+    };
 
 })();

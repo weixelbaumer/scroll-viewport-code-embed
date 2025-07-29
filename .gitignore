@@ -98,4 +98,14 @@ Thumbs.db
 .vscode/
 
 # Ignore Cursor specific files
-.cursor/ db/database.sqlite
+.cursor/
+db/database.sqlite
+
+# Ignore all folders that start with a dot
+.*/
+
+# Serena MCP Server (exclude from git)
+serena/
+.serena/
+run-serena.sh
+SERENA_SETUP.md

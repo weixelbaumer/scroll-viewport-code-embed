@@ -1,0 +1,484 @@
+/**
+ * Scroll Viewport Custom Theme CSS
+ * Version: 3.1.0 (synchronized with Confluence app)
+ * File: theme-styles.css
+ * 
+ * This stylesheet provides custom styling for the Scroll Viewport theme including:
+ * - GitHub code blocks with syntax highlighting
+ * - Panel macros and information blocks
+ * - Layout adjustments for Scroll Viewport
+ * - Legacy notices and warning styles
+ * - Footer customizations
+ */
+
+/* ================================================
+   GITHUB CODE BLOCKS
+   ================================================ */
+
+/* Base styles for GitHub code blocks */
+.github-code-block {
+    position: relative;
+    margin: 16px 0;
+    border: 1px solid #d1d5da;
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: #f6f8fa;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+/* GitHub code block header */
+.github-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: #f6f8fa;
+    border-bottom: 1px solid #d1d5da;
+    font-size: 12px;
+    color: #586069;
+}
+
+.github-code-language {
+    font-weight: 600;
+    color: #24292e;
+    text-transform: capitalize;
+}
+
+.github-code-link {
+    color: #0366d6;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.github-code-link:hover {
+    color: #0256c7;
+    text-decoration: underline;
+}
+
+/* Code content area */
+.github-code-block pre {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+    background-color: #ffffff;
+    line-height: 1.45;
+}
+
+.github-code-block code {
+    display: block;
+    padding: 0;
+    background: none;
+    font-size: 13px;
+    font-family: inherit;
+    color: #24292e;
+}
+
+/* Loading state */
+.github-code-loading {
+    padding: 20px;
+    text-align: center;
+    color: #586069;
+    background-color: #f6f8fa;
+    border: 1px solid #d1d5da;
+    border-radius: 6px;
+    margin: 16px 0;
+}
+
+/* Error state */
+.github-code-error {
+    padding: 16px;
+    color: #d73a49;
+    background-color: #ffeef0;
+    border: 1px solid #ffdce0;
+    border-radius: 6px;
+    margin: 16px 0;
+}
+
+/* Theme variations */
+.github-code-block[data-theme="github-dark"] {
+    background-color: #0d1117;
+    border-color: #30363d;
+}
+
+.github-code-block[data-theme="github-dark"] .github-code-header {
+    background-color: #161b22;
+    border-bottom-color: #30363d;
+    color: #8b949e;
+}
+
+.github-code-block[data-theme="github-dark"] .github-code-language {
+    color: #f0f6fc;
+}
+
+.github-code-block[data-theme="github-dark"] pre {
+    background-color: #0d1117;
+}
+
+.github-code-block[data-theme="github-dark"] code {
+    color: #c9d1d9;
+}
+
+
+/* ================================================
+   LAYOUT ADJUSTMENTS
+   ================================================ */
+
+/* Root layout container width adjustment */
+:root {
+    --K15t-layout-container-width: calc(800px + var(--vp-layout-container-width, 0px));
+}
+
+/* Article layout optimizations */
+.vp-article .article-header {
+    margin: 0;
+}
+
+.vp-article .vp-breadcrumbs {
+    margin: 0;
+}
+
+/* Force block display for content layout elements */
+.vp-article :where(.vp-article__content, .contentLayout2, .columnLayout.fixed-width .innerCell) {
+    display: block !important;
+}
+
+/* Scrollable list container */
+.div.col-span-1.w-full.list {
+    overflow-y: auto;
+    max-height: 500px;
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5da #f6f8fa;
+}
+
+/* Webkit scrollbar styling */
+.div.col-span-1.w-full.list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.div.col-span-1.w-full.list::-webkit-scrollbar-track {
+    background: #f6f8fa;
+}
+
+.div.col-span-1.w-full.list::-webkit-scrollbar-thumb {
+    background: #d1d5da;
+    border-radius: 4px;
+}
+
+.div.col-span-1.w-full.list::-webkit-scrollbar-thumb:hover {
+    background: #c1c5ca;
+}
+
+
+/* ================================================
+   PANEL MACROS & INFORMATION BLOCKS
+   ================================================ */
+
+/* Base panel macro styles */
+.panel-macro {
+    --_background-color: var(--color-background, #f3f4f6);
+    background-color: var(--_background-color);
+    border-radius: var(--K15t-radius-small, 4px);
+    border-style: none;
+    display: flex;
+    margin-bottom: 1rem;
+    margin-top: 1.25rem;
+    max-width: 100%;
+    padding: 1rem 2rem 1rem 1rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Panel macro icon container */
+.panel-macro__icon {
+    flex-shrink: 0;
+    margin-right: 12px;
+}
+
+.panel-macro__icon img {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+}
+
+/* Panel macro content */
+.panel-macro__content {
+    flex-grow: 1;
+    padding: 0;
+}
+
+.panel-macro__content--heading {
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+    color: #24292e;
+}
+
+/* Warning panel specific styles */
+.panel-macro--warning {
+    --color-background: var(--K15t-background-danger, #ffeef0);
+    border-left: 4px solid #d73a49;
+}
+
+/* Info panel specific styles */
+.panel-macro--info {
+    background-color: #deebff;
+    border: 1px solid #deebff;
+    border-left: 4px solid #0366d6;
+}
+
+
+/* ================================================
+   CONFLUENCE INFORMATION MACROS
+   ================================================ */
+
+/* Base information macro styles */
+.confluence-information-macro {
+    background: #fff8f7;
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    color: #333;
+    margin: 10px 0 1em 0;
+    min-height: 20px;
+    position: relative;
+    padding: 10px 10px 10px 50px;
+}
+
+/* First child optimization */
+.confluence-information-macro:first-child {
+    margin-top: 0;
+}
+
+/* Warning macro specific styles */
+.confluence-information-macro-warning {
+    background: #fff8f7;
+    border: 1px solid #d04437;
+    border-left-width: 5px;
+}
+
+.confluence-information-macro-warning .title {
+    color: #d04437;
+    font-weight: 600;
+}
+
+/* Information macro icons */
+.confluence-information-macro .confluence-information-macro-icon {
+    display: block;
+    left: 10px;
+    line-height: 20px;
+    position: absolute;
+    top: 12px;
+    vertical-align: text-bottom;
+}
+
+.confluence-information-macro .confluence-information-macro-icon.aui-iconfont-error {
+    color: #cf4336;
+}
+
+/* AUI icon styles */
+.aui-icon {
+    --aui-icon-size: 16px;
+    --aui-icon-font: "Adgs Icons";
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    border: none;
+    display: inline-flex;
+    font-size: 0;
+    height: var(--aui-icon-size);
+    line-height: 0;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    text-align: left;
+    text-decoration: none;
+    vertical-align: text-bottom;
+    width: var(--aui-icon-size);
+}
+
+.aui-icon-small {
+    --aui-icon-size: 16px;
+}
+
+.aui-iconfont-error::before {
+    content: "\f15a";
+    font-family: var(--aui-icon-font);
+    font-size: var(--aui-icon-size);
+    color: inherit;
+}
+
+
+/* ================================================
+   FOOTER CUSTOMIZATIONS
+   ================================================ */
+
+/* Footer links styling */
+footer .footer__links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+footer .footer__links--separator {
+    color: #586069;
+    margin: 0 0.25rem;
+}
+
+footer .footer__links a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+footer .footer__links a:hover {
+    color: #0366d6;
+    text-decoration: underline;
+}
+
+/* Render links standardization */
+.render-links--link a {
+    font-size: 14px;
+    color: #0366d6;
+    text-decoration: none;
+}
+
+.render-links--link a:hover {
+    text-decoration: underline;
+}
+
+
+/* ================================================
+   RESPONSIVE ADJUSTMENTS
+   ================================================ */
+
+@media (max-width: 768px) {
+    /* Mobile panel macro adjustments */
+    .panel-macro {
+        padding: 0.75rem 1.5rem 0.75rem 0.75rem;
+        margin-top: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Mobile code block adjustments */
+    .github-code-block {
+        margin: 12px 0;
+        font-size: 12px;
+    }
+    
+    .github-code-header {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+    
+    .github-code-block pre {
+        padding: 12px;
+    }
+    
+    /* Mobile information macro adjustments */
+    .confluence-information-macro {
+        padding-left: 40px;
+    }
+    
+    .confluence-information-macro .confluence-information-macro-icon {
+        left: 8px;
+        top: 10px;
+    }
+}
+
+
+/* ================================================
+   PRINT STYLES
+   ================================================ */
+
+@media print {
+    /* Hide interactive elements */
+    .github-code-link,
+    .footer__links--separator {
+        display: none;
+    }
+    
+    /* Optimize code blocks for print */
+    .github-code-block {
+        border-color: #000;
+        page-break-inside: avoid;
+    }
+    
+    .github-code-block pre {
+        background-color: #fff;
+        max-height: none;
+    }
+    
+    /* Optimize panels for print */
+    .panel-macro,
+    .confluence-information-macro {
+        page-break-inside: avoid;
+        border-color: #000;
+    }
+}
+
+
+/* ================================================
+   UTILITY CLASSES
+   ================================================ */
+
+/* Text utilities */
+.text-muted {
+    color: #586069;
+}
+
+.text-danger {
+    color: #d73a49;
+}
+
+.text-success {
+    color: #28a745;
+}
+
+/* Spacing utilities */
+.mt-0 { margin-top: 0; }
+.mb-0 { margin-bottom: 0; }
+.mt-1 { margin-top: 0.25rem; }
+.mb-1 { margin-bottom: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+
+/* Display utilities */
+.d-none { display: none; }
+.d-block { display: block; }
+.d-flex { display: flex; }
+
+/* Border utilities */
+.border-0 { border: 0; }
+.border-top { border-top: 1px solid #d1d5da; }
+.border-bottom { border-bottom: 1px solid #d1d5da; }
+
+
+/* ================================================
+   ANIMATIONS & TRANSITIONS
+   ================================================ */
+
+/* Smooth transitions for interactive elements */
+a,
+button,
+.panel-macro,
+.github-code-block {
+    transition: all 0.2s ease;
+}
+
+/* Hover effects */
+.panel-macro:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.github-code-block:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading animation */
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.github-code-loading {
+    animation: pulse 1.5s ease-in-out infinite;
+}
