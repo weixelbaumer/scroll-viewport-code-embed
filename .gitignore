@@ -110,3 +110,11 @@ serena/
 run-serena.sh
 SERENA_SETUP.md
 db/database.sqlite
+
+# Development tool directories
+.windsurf/
+.gemini/
+.clinerules/
+.cursor/
+.bmad-core/
+.bmad-infrastructure-devops/
